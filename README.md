@@ -60,6 +60,10 @@ fonts/          polices hébergées et leurs licences
 docs/           captures d'écran du README
 ```
 
+## Licence
+
+Code publié sous licence [MIT](LICENSE). Les polices du dossier `fonts/` sont sous licence SIL Open Font (voir les fichiers `LICENSE-*.txt`).
+
 ## Limites connues
 
 - Les données sont liées au navigateur : changer de navigateur ou vider ses données efface la bibliothèque. Un export et un import de fichier sont une piste d'amélioration.
