@@ -57,7 +57,7 @@ function descOf(b) {
 
 /* ---------- Raccourcis et état ---------- */
 const $ = id => document.getElementById(id);
-let filter = "all", current = null, draft = { status: null, owned: null }, afterCreate = null, editingId = null, delId = null, selectedId = null;
+let libQuery = "", filter = "all", current = null, draft = { status: null, owned: null }, afterCreate = null, editingId = null, delId = null, selectedId = null;
 
 /* ---------- En-tête et menu des bibliothèques ---------- */
 const ICON_EDIT = '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg>';
@@ -91,6 +91,14 @@ if (document.fonts) document.fonts.ready.then(fitName);
 function renderHeader() {
   const lib = currentLib();
   $("libName").textContent = lib ? lib.name : t("noLibrary");
+  /* Bouton « rechercher dans ma bibliothèque » : porte le nom de la bibliothèque active */
+  const sb = $("libSearchBtn");
+  sb.hidden = !lib;
+  if (lib) {
+    sb.textContent = t("searchInLib", { name: lib.name });
+    sb.title = t("searchInLibLabel", { name: lib.name });
+    sb.setAttribute("aria-label", t("searchInLibLabel", { name: lib.name }));
+  }
   fitName();
   const list = $("libList");
   if (!state.libs.length) {
@@ -112,6 +120,7 @@ function renderHeader() {
     b.setAttribute("aria-current", l.id === state.currentId);
     b.addEventListener("click", () => {
       state.currentId = l.id;
+      resetLibSearch();
       persist();
       closeMenu();
       $("resultsSection").hidden = true;
@@ -205,6 +214,7 @@ $("delConfirm").addEventListener("click", () => {
   state.libs = state.libs.filter(l => l.id !== delId);
   if (state.currentId === delId) state.currentId = state.libs[0] ? state.libs[0].id : null;
   delId = null;
+  resetLibSearch();
   persist();
   $("delDlg").close();
   $("resultsSection").hidden = true;
@@ -231,6 +241,7 @@ $("libForm").addEventListener("submit", e => {
   const lib = { id: uid(), name, books: [] };
   state.libs.push(lib);
   state.currentId = lib.id;
+  resetLibSearch();
   persist();
   $("libDlg").close();
   $("resultsSection").hidden = true;
@@ -257,6 +268,8 @@ $("searchForm").addEventListener("submit", async e => {
   e.preventDefault();
   const q = $("q").value.trim();
   if (!q) return;
+  libQuery = "";
+  renderLibrary();
   setStatus("searching");
   try {
     const url = "https://www.googleapis.com/books/v1/volumes?maxResults=18&printType=books&q="
@@ -280,13 +293,14 @@ $("searchForm").addEventListener("submit", async e => {
 
 /* Retour à la bibliothèque quand le champ est vidé (croix d'effacement ou texte supprimé) */
 $("q").addEventListener("input", () => {
-  if ($("q").value === "") { $("resultsSection").hidden = true; setStatus(""); }
+  if ($("q").value === "") { $("resultsSection").hidden = true; setStatus(""); if (libQuery) { libQuery = ""; renderLibrary(); } }
 });
 
 /* Le nom de la bibliothèque est un lien vers la bibliothèque */
 $("libName").addEventListener("click", () => {
   if (!currentLib()) { askNewLibrary(); return; }
   $("q").value = "";
+  libQuery = "";
   $("resultsSection").hidden = true;
   setStatus("");
   filter = "all";
@@ -392,23 +406,49 @@ function showResults(found) {
 $("closeResults").addEventListener("click", () => { $("resultsSection").hidden = true; });
 
 function renderLibrary() {
+  const words = normText(libQuery).split(/\s+/).filter(Boolean);
   const list = books().filter(b =>
+    (!words.length || matchesAll(b, words)) && (
     filter === "all" ? true :
     filter === "read" ? b.status === "read" :
     filter === "reading" ? b.status === "reading" :
     filter === "unread" ? b.status === "unread" :
-    filter === "owned" ? b.owned : !b.owned);
+    filter === "owned" ? b.owned : !b.owned));
   const box = $("library");
   if (!list.length) {
     const p = document.createElement("p");
     p.className = "empty";
     p.textContent = !currentLib() ? t("emptyNoLib") :
+      words.length ? t("emptySearch") :
       books().length ? t("emptyFilter") : t("emptyLib");
     box.replaceChildren(p);
     return;
   }
   box.replaceChildren(...list.map(b => card(b, true)));
 }
+
+/* ---------- Recherche dans la bibliothèque (sans accents ni majuscules, tous les mots doivent correspondre) ---------- */
+const normText = s => (s || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
+const matchesAll = (b, words) => {
+  const hay = normText([titleOf(b), authorOf(b), b.year, b.isbn].join(" "));
+  return words.every(w => hay.includes(w));
+};
+function updateLibStatus() {
+  const lib = currentLib();
+  if (!lib || !libQuery) return;
+  const n = document.querySelectorAll("#library .book").length;
+  setStatus(n === 0 ? "libNone" : n === 1 ? "libFound1" : "libFoundN", false, { n, name: lib.name });
+}
+function resetLibSearch() { libQuery = ""; $("q").value = ""; setStatus(""); }
+
+$("libSearchBtn").addEventListener("click", () => {
+  const lib = currentLib(); if (!lib) return;
+  libQuery = $("q").value.trim();
+  $("resultsSection").hidden = true;   /* on quitte les résultats Google pour afficher la bibliothèque filtrée */
+  renderLibrary();
+  updateLibStatus();
+  $("tabs").scrollIntoView({ behavior: "smooth", block: "start" });
+});
 
 function renderAll() { renderHeader(); renderLibrary(); }
 
@@ -418,6 +458,7 @@ $("tabs").addEventListener("click", e => {
   filter = (tab.dataset.f !== "all" && tab.dataset.f === filter) ? "all" : tab.dataset.f;
   document.querySelectorAll("#tabs .tab").forEach(x => x.setAttribute("aria-pressed", x.dataset.f === filter));
   renderLibrary();
+  updateLibStatus();
 });
 
 /* ---------- Fiche d'un livre ---------- */

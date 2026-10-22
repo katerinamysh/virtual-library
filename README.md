@@ -10,6 +10,7 @@ Application web de bibliothèque virtuelle : on cherche un livre, on l'ajoute, p
 
 - **Recherche** par titre, auteur ou ISBN avec l'API [Google Books](https://developers.google.com/books), avec plusieurs tentatives automatiques si le service est momentanément indisponible.
 - **Couvertures** : Open Library par ISBN en priorité, puis Google Books, puis le titre sur fond neutre.
+- **Recherche dans sa bibliothèque** : un second bouton, qui porte le nom de la bibliothèque, filtre les livres déjà ajoutés par titre, auteur, année ou ISBN (sans tenir compte des accents ni des majuscules), en combinaison avec les filtres de lecture.
 - **Fiche d'un livre** : couverture, titre, auteur, année et descriptif à la demande.
 - **Suivi de lecture** en deux temps : non lu, en cours ou lu, puis possédé ou non possédé.
 - **Filtres** : tous, en cours, lus, non lus, possédés, non possédés. Un second clic sur le filtre actif revient à « Tous ».
