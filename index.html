@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ma bibliothèque · bibliothèque virtuelle</title>
+<meta name="description" content="Bibliothèque virtuelle : recherche de livres avec l'API Google Books, suivi de lecture (lu, en cours, non lu), livres possédés ou non, et plusieurs bibliothèques.">
+<meta name="theme-color" content="#F2ECE4">
+<meta property="og:type" content="website">
+<meta property="og:title" content="Ma bibliothèque">
+<meta property="og:description" content="Suivez vos lectures : recherche Google Books, statuts de lecture, livres possédés, plusieurs bibliothèques.">
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<link rel="preload" href="fonts/playfair-display-latin-700-normal.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header>
+  <h1>Bibliothèque</h1>
+  <div class="divider"><img src="separateur.webp" alt="" width="440" height="71"></div>
+  <div class="brand">
+    <button class="icon-btn" id="libBtn" type="button" aria-haspopup="true" aria-expanded="false" aria-label="Mes bibliothèques">
+      <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" stroke-linecap="round" aria-hidden="true"><path d="M2 4h6a4 4 0 0 1 4 4v12a3 3 0 0 0-3-3H2z"/><path d="M22 4h-6a4 4 0 0 0-4 4v12a3 3 0 0 1 3-3h7z"/></svg>
+    </button>
+    <button class="brand-sub" id="libName" type="button" title="Aller à ma bibliothèque">Aucune bibliothèque</button>
+    <div class="lib-menu" id="libMenu" role="menu" aria-label="Mes bibliothèques" hidden>
+      <button class="lib-item" id="newLibBtn" type="button" role="menuitem">+ Créer une nouvelle bibliothèque</button>
+      <div class="lib-sep" role="separator"></div>
+      <div id="libList" role="none"></div>
+    </div>
+  </div>
+  <form class="search" id="searchForm" role="search">
+    <input id="q" type="search" placeholder="Titre, auteur ou ISBN" aria-label="Rechercher un livre" autocomplete="off">
+    <button class="btn" type="submit">Rechercher</button>
+  </form>
+  <p class="status" id="status" role="status"></p>
+</header>
+
+<main>
+  <section id="resultsSection" hidden>
+    <div class="tabs"><h2>Résultats</h2><button class="tab" id="closeResults" type="button">Fermer</button></div>
+    <div class="grid" id="results"></div>
+  </section>
+
+  <section>
+    <div class="tabs" id="tabs">
+      <button class="tab" data-f="all" aria-pressed="true">Tous</button>
+      <button class="tab" data-f="reading" aria-pressed="false">En cours</button>
+      <button class="tab" data-f="read" aria-pressed="false">Lus</button>
+      <button class="tab" data-f="unread" aria-pressed="false">Non lus</button>
+      <button class="tab" data-f="owned" aria-pressed="false">Possédés</button>
+      <button class="tab" data-f="notowned" aria-pressed="false">Non possédés</button>
+    </div>
+    <div class="grid" id="library"></div>
+  </section>
+</main>
+
+<dialog id="dlg">
+  <div class="sheet">
+    <div class="top">
+      <div id="coverBox"></div>
+      <div>
+        <h2 id="dTitle"></h2>
+        <p class="meta" id="dAuthor"></p>
+        <p class="meta" id="dYear"></p>
+        <button class="link" id="descBtn" type="button">Voir le descriptif</button>
+      </div>
+    </div>
+    <p class="desc" id="dDesc" hidden></p>
+
+    <fieldset id="readStep">
+      <legend>Ce livre est…</legend>
+      <div class="choices three">
+        <button class="choice" type="button" data-status="unread" aria-pressed="false">Non lu</button>
+        <button class="choice" type="button" data-status="reading" aria-pressed="false">En cours</button>
+        <button class="choice" type="button" data-status="read" aria-pressed="false">Lu</button>
+      </div>
+    </fieldset>
+
+    <fieldset id="ownStep" hidden aria-label="Possession du livre">
+      <div class="choices">
+        <button class="choice" type="button" data-owned="true" aria-pressed="false">Possédé</button>
+        <button class="choice" type="button" data-owned="false" aria-pressed="false">Non possédé</button>
+      </div>
+    </fieldset>
+
+    <div class="actions">
+      <button class="btn ghost danger" id="removeBtn" type="button" hidden>Retirer</button>
+      <button class="btn" id="saveBtn" type="button" disabled>Enregistrer</button>
+    </div>
+  </div>
+</dialog>
+
+<dialog id="libDlg">
+  <form class="sheet" id="libForm">
+    <h2 id="libTitle">Créer une nouvelle bibliothèque</h2>
+    <label for="libInput" class="meta">Nom de la bibliothèque</label>
+    <input id="libInput" type="text" maxlength="40" required autocomplete="off" placeholder="Ex. : Bibliothèque de Marie">
+    <div class="actions">
+      <button class="btn ghost" id="libCancel" type="button">Annuler</button>
+      <button class="btn" id="libSubmit" type="submit">Créer</button>
+    </div>
+  </form>
+</dialog>
+
+<dialog id="delDlg">
+  <div class="sheet">
+    <h2>Supprimer la bibliothèque</h2>
+    <p class="meta" id="delText"></p>
+    <div class="actions">
+      <button class="btn" id="delCancel" type="button">Annuler</button>
+      <button class="btn ghost danger" id="delConfirm" type="button">Supprimer</button>
+    </div>
+  </div>
+</dialog>
+
+<script src="config.js"></script>
+<script src="demo.js"></script>
+<script src="script.js"></script>
+</body>
+</html>

@@ -1,0 +1,167 @@
+/* =====================================================================
+   Ma bibliothèque : feuille de style (version consolidée)
+   Sommaire : 1. Variables  2. Base  3. En-tête  4. Recherche et filtres
+              5. Livres      6. Fenêtres (popups)  7. Écrans larges et animations
+   ===================================================================== */
+
+/* ---------- Polices hébergées dans le site (aucune requête vers Google Fonts) ---------- */
+@font-face{font-family:"Jost";font-style:normal;font-weight:400;font-display:swap;src:url("fonts/jost-latin-400-normal.woff2") format("woff2")}
+@font-face{font-family:"Jost";font-style:normal;font-weight:500;font-display:swap;src:url("fonts/jost-latin-500-normal.woff2") format("woff2")}
+@font-face{font-family:"Jost";font-style:normal;font-weight:600;font-display:swap;src:url("fonts/jost-latin-600-normal.woff2") format("woff2")}
+@font-face{font-family:"Jost";font-style:italic;font-weight:400;font-display:swap;src:url("fonts/jost-latin-400-italic.woff2") format("woff2")}
+@font-face{font-family:"Lora";font-style:normal;font-weight:400;font-display:swap;src:url("fonts/lora-latin-400-normal.woff2") format("woff2")}
+@font-face{font-family:"Lora";font-style:normal;font-weight:600;font-display:swap;src:url("fonts/lora-latin-600-normal.woff2") format("woff2")}
+@font-face{font-family:"Lora";font-style:normal;font-weight:700;font-display:swap;src:url("fonts/lora-latin-700-normal.woff2") format("woff2")}
+@font-face{font-family:"Playfair Display";font-style:normal;font-weight:600;font-display:swap;src:url("fonts/playfair-display-latin-600-normal.woff2") format("woff2")}
+@font-face{font-family:"Playfair Display";font-style:normal;font-weight:700;font-display:swap;src:url("fonts/playfair-display-latin-700-normal.woff2") format("woff2")}
+
+/* ---------- 1. Variables ---------- */
+:root{
+  /* Palette */
+  --beige:#C3AE9A; --taupe:#776351; --mahogany:#321912; --walnut:#332824;
+
+  /* Rôles des couleurs */
+  --bg:#F2ECE4; --surface:#F2ECE4;                 /* fond de la page et des fenêtres */
+  --ink:#000; --muted:#000;                        /* texte */
+  --accent:var(--mahogany); --accent-ink:var(--beige);
+  --soft:rgba(195,174,154,.55);                    /* fond d'une couverture vide, bibliothèque active du menu */
+  --warn:#8a2a14;                                  /* erreurs et suppression */
+
+  /* Les 3 polices du site, avec des polices de secours proches disponibles partout */
+  --font-display:"Playfair Display","Didot","Bodoni MT","Baskerville","Times New Roman",serif;            /* titre, titres de fenêtres */
+  --font-text:"Lora","Georgia","Palatino Linotype","Book Antiqua",serif;                                   /* titres de livres, descriptifs */
+  --font-ui:"Jost","Futura","Century Gothic","Avenir Next","Avenir","Trebuchet MS","Segoe UI",sans-serif;   /* interface */
+}
+
+/* ---------- 2. Base ---------- */
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.5 var(--font-ui)}
+h2{font:600 1.25rem var(--font-display);margin:0}
+button{font:inherit;font-family:var(--font-ui);cursor:pointer;transition:transform .2s ease}
+:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+::placeholder{color:var(--walnut);opacity:1;font-style:italic}
+[hidden]{display:none!important}
+
+/* Zoom au survol de tous les boutons (le logo et les couvertures ont le leur) ; --zoom permet d'en changer l'intensité */
+button:not(:disabled):not(.icon-btn):hover{transform:scale(var(--zoom,1.05))}
+
+/* Boutons rectangulaires à cadre plein */
+.btn{padding:3px 12px;border:2px solid var(--accent);border-radius:0;background:var(--accent);color:var(--accent-ink);font-weight:600;letter-spacing:.04em}
+.btn.ghost{background:transparent;color:var(--accent)}
+.btn.danger{border-color:var(--warn)}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+
+/* ---------- 3. En-tête ---------- */
+header,main{max-width:1140px;margin:0 auto;padding:0 20px}      /* 6 livres par ligne au maximum */
+header{padding-top:64px}
+header h1{margin:0;font:700 clamp(1.9rem,7vw,2.9rem)/1 var(--font-display);letter-spacing:.05em;text-transform:uppercase;white-space:nowrap;text-align:center}
+
+/* Frise : taille fixe, centrée, rognée des deux côtés si l'écran est plus étroit */
+.divider{display:flex;justify-content:center;overflow:hidden;margin:24px 0 62px}
+.divider img{flex:none;display:block;width:440px;height:auto;max-width:none}
+
+/* Logo + nom de la bibliothèque, au-dessus de la recherche */
+.brand{position:relative;display:flex;align-items:center;gap:12px;margin-bottom:12px}
+.icon-btn{display:flex;flex:none;align-items:center;justify-content:center;padding:4px;border:0;border-radius:0;background:none;color:var(--ink)}
+.icon-btn svg{width:30px;height:30px;transform:rotate(30deg)}
+.icon-btn:hover,.icon-btn[aria-expanded="true"]{transform:scale(1.12)}
+.brand-sub{flex:0 1 auto;min-width:0;max-width:100%;margin:0;padding:0;border:0;background:none;color:var(--ink);
+  font:600 1rem/1.25 var(--font-ui);text-align:left;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;transform-origin:left center}   /* la taille du texte s'adapte (script.js) */
+
+/* Menu des bibliothèques */
+.lib-menu{position:absolute;top:calc(100% + 6px);left:0;z-index:20;width:max-content;min-width:min(320px,calc(100% + 6px));max-width:min(420px,88vw);
+  padding:6px;background:var(--surface);border:2px solid var(--ink)}
+.lib-sep{height:2px;margin:6px 0;background:var(--ink)}
+.lib-empty{padding:8px 12px;color:var(--muted);font-size:.9rem}
+.lib-row{display:flex;align-items:center}
+.lib-item{--zoom:1.03;display:block;width:100%;padding:10px 12px;border:0;background:none;color:var(--ink);text-align:left;font:600 .9rem var(--font-ui);transform-origin:left center}
+.lib-item[aria-current="true"]{background:var(--soft);font-weight:700}
+.lib-row .lib-item{flex:1;min-width:0;overflow-wrap:anywhere}
+.lib-act{--zoom:1.35;flex:none;display:flex;padding:9px;border:0;background:none;color:var(--ink)}
+
+/* ---------- 4. Recherche et filtres ---------- */
+.search{display:flex;gap:8px}
+.search input{flex:1;min-width:0;padding:3.5px 14px;border:1px solid var(--ink);border-radius:0;background:var(--beige);color:var(--ink);font:400 .9rem/1.5 var(--font-ui)}
+.search .btn{padding:2.5px 7px;border-color:var(--mahogany);font-size:.9rem}
+.status{margin:16px 0 0;color:var(--muted)}
+.status.err{color:var(--warn)}
+
+/* Croix d'effacement de la recherche (noire) */
+input[type="search"]::-webkit-search-cancel-button{
+  -webkit-appearance:none;appearance:none;width:14px;height:14px;margin-left:8px;cursor:pointer;background:var(--ink);
+  -webkit-mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M5 5l14 14M19 5L5 19' stroke='black' stroke-width='3' stroke-linecap='round'/%3E%3C/svg%3E") center/contain no-repeat;
+          mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M5 5l14 14M19 5L5 19' stroke='black' stroke-width='3' stroke-linecap='round'/%3E%3C/svg%3E") center/contain no-repeat;
+}
+
+/* Filtres */
+.tabs{display:flex;flex-wrap:wrap;gap:6px;margin:28px 0 64px}   /* 64px : plus grand que l'espace entre deux lignes de livres */
+.tab{padding:2.5px 7px;border:2px solid var(--ink);border-radius:0;background:var(--beige);color:var(--ink);font-size:.9rem;letter-spacing:.04em}
+.tab[aria-pressed="true"]{background:var(--mahogany);border-color:var(--mahogany);color:var(--beige)}
+
+/* ---------- 5. Livres ---------- */
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));column-gap:20px;row-gap:0;padding-bottom:48px}
+.empty{grid-column:1/-1;padding:40px 0;color:var(--muted)}
+
+/* Couverture */
+.cover{display:block;width:100%;aspect-ratio:2/3;border-radius:4px 8px 8px 4px;background:var(--soft);object-fit:cover;
+  box-shadow:inset 4px 0 0 rgba(0,0,0,.12),0 2px 6px rgba(0,0,0,.18);transition:box-shadow .2s ease}
+.nocover{display:flex;align-items:center;justify-content:center;padding:12px;text-align:center;font:600 .9rem var(--font-text);color:var(--muted)}
+
+/* Cadre photo vintage : coins extérieurs pointus (assemblage « onglet » grâce aux 4 teintes), intérieur qui suit l'arrondi de la couverture */
+.frame{--zoom:1.06;display:block;width:100%;padding:0;border:3.5px solid;border-color:#d6c8ba #b39e89 #a58f7a #ccbcab;border-radius:0;
+  background:var(--beige);box-shadow:0 3px 8px rgba(0,0,0,.22);cursor:pointer}
+.frame:focus-visible{transform:scale(1.06)}
+button.frame:hover .cover,button.frame:focus-visible .cover{box-shadow:inset 4px 0 0 rgba(0,0,0,.12),0 8px 18px rgba(0,0,0,.3)}
+.book.selected .frame{box-shadow:0 0 0 3px var(--bg),0 0 0 5px var(--beige),0 3px 8px rgba(0,0,0,.22)}   /* livre sélectionné : double cadre */
+
+/* Carte d'un livre : couverture / titre / auteur / badges.
+   Repli : gabarit fixe (titre 2 lignes max, auteur 1 ligne, puis « … »). */
+.book{position:relative;display:flex;flex-direction:column;padding:0 0 42px}
+.book:hover,.book:focus-within{z-index:1}
+.book .t{margin-top:10px;min-height:2.6em;font:600 .875rem/1.3 var(--font-text);overflow:hidden;overflow-wrap:anywhere;
+  display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;line-clamp:2}
+.book .a{margin-top:3px;font-size:.85rem;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.badges{display:flex;flex-wrap:nowrap;gap:4px;margin-top:8px;overflow:hidden}
+.badge{min-width:0;padding:2px 8px;border:0;border-radius:0;background:var(--mahogany);color:var(--beige);
+  font-size:.75rem;letter-spacing:.04em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.badge.off{background:var(--beige);color:var(--ink)}
+
+/* Navigateurs récents : les 4 lignes d'une carte sont partagées avec ses voisines (tout reste aligné,
+   un titre court laisse de l'espace à côté d'un titre sur deux lignes). */
+@supports (grid-template-rows:subgrid){
+  .book{display:grid;grid-row:span 4;grid-template-rows:subgrid;grid-template-columns:minmax(0,1fr)}
+  .book .t{min-height:0}
+}
+
+/* ---------- 6. Fenêtres (popups) ---------- */
+dialog{width:min(560px,94vw);max-height:92vh;padding:0;border:4px double var(--ink);border-radius:0;background:var(--surface);color:var(--ink)}
+dialog::backdrop{background:rgba(51,40,36,.7)}
+.sheet{display:flex;flex-direction:column;gap:14px;max-height:92vh;padding:14px 22px;overflow:auto}
+.sheet input[type="text"]{padding:12px 14px;border:1px solid var(--ink);border-radius:0;background:var(--beige);color:var(--ink);font:inherit}
+
+/* Fiche d'un livre */
+.top{display:flex;gap:18px}
+.top h2{margin-bottom:4px}
+.top .frame{flex:none;width:136px;cursor:default}
+.meta{margin:0;color:var(--muted);font-size:.9rem}
+.desc{margin:0;color:var(--muted);font:.95rem/1.6 var(--font-text);white-space:pre-line}
+.link{--zoom:1.05;margin-top:8px;padding:0;border:0;background:none;color:var(--accent);font-size:.9rem;text-decoration:underline;transform-origin:left center}
+fieldset{margin:0;padding:0;border:0}
+legend{margin-bottom:8px;padding:0;font-weight:600}
+.choices{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.choices.three{grid-template-columns:repeat(3,1fr)}
+.choice{padding:2.5px 7px;border:2px solid var(--ink);border-radius:0;background:var(--beige);color:var(--ink);font-size:.9rem;font-weight:400;letter-spacing:.04em}
+.choice[aria-pressed="true"]{background:var(--accent);border-color:var(--mahogany);color:var(--accent-ink)}
+.actions{display:flex;flex-wrap:wrap;justify-content:flex-end;gap:8px}
+
+/* ---------- 7. Écrans étroits, écrans larges et animations ---------- */
+@media (max-width:480px){
+  .top{flex-direction:column}
+  .top .frame{width:116px}
+}
+@media (min-width:1040px){
+  .badge{padding:2px 7px}
+}
+@media (prefers-reduced-motion:reduce){
+  button,.cover{transition:none}
+}
