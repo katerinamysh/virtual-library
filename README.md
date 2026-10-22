@@ -14,6 +14,7 @@ Application web de bibliothèque virtuelle : on cherche un livre, on l'ajoute, p
 - **Suivi de lecture** en deux temps : non lu, en cours ou lu, puis possédé ou non possédé.
 - **Filtres** : tous, en cours, lus, non lus, possédés, non possédés. Un second clic sur le filtre actif revient à « Tous ».
 - **Plusieurs bibliothèques** : création, renommage et suppression, avec un menu accessible au clavier (flèches, Échap).
+- **Interface en français et en anglais** (boutons FR / EN, langue du navigateur détectée à la première visite). La recherche, elle, n'est limitée à aucune langue : on peut ajouter des livres dans n'importe quelle langue, quelle que soit celle de l'interface.
 - **Sauvegarde locale** dans le navigateur (`localStorage`) : aucune donnée n'est envoyée à un serveur.
 
 ![Fiche d'un livre](docs/apercu-fiche.png)
@@ -54,7 +55,8 @@ Sur un site public, une clé est visible par tous les visiteurs. Utilisez une cl
 index.html      page et fenêtres
 style.css       styles et polices
 script.js       logique de l'application
-demo.js         bibliothèque d'exemple
+demo.js         bibliothèque d'exemple (FR / EN)
+i18n.js         traductions de l'interface
 config.js       configuration (clé API facultative)
 fonts/          polices hébergées et leurs licences
 docs/           captures d'écran du README

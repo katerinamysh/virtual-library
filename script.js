@@ -2,6 +2,7 @@
 const API_KEY = (window.APP_CONFIG && window.APP_CONFIG.googleBooksApiKey) || "";   /* définie dans config.js */
 const STORE = "ma-bibliotheque-v2";
 const OLD_KEY = "ma-bibliotheque";
+const t = I18N.t;   /* traduction : voir i18n.js */
 
 /* ---------- Données : plusieurs bibliothèques, stockées dans le navigateur ---------- */
 const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
@@ -16,7 +17,7 @@ if (!state.libs.length) {
   try {
     const old = JSON.parse(localStorage.getItem(OLD_KEY));
     if (Array.isArray(old) && old.length) {
-      state.libs.push({ id: uid(), name: "Ma bibliothèque", books: old });
+      state.libs.push({ id: uid(), name: t("defaultLibName"), books: old });
       state.currentId = state.libs[0].id;
     }
   } catch (e) {}
@@ -26,17 +27,33 @@ let firstVisit = false;
 try { firstVisit = localStorage.getItem(STORE) === null && localStorage.getItem(OLD_KEY) === null; } catch (e) {}
 if (firstVisit && !state.libs.length && window.DEMO_LIBRARY) {
   const d = window.DEMO_LIBRARY;
-  state.libs.push({ id: uid(), name: d.name, books: d.books.map(b => ({ ...b, cover: "", isbn: "" })) });
+  state.libs.push({ id: uid(), name: (I18N.getLang() === "en" && d.nameEn) || d.name, books: d.books.map(b => ({ ...b, cover: "", isbn: "" })) });
   state.currentId = state.libs[0].id;
 }
-state.libs.forEach(l => l.books.forEach(b => { if (!b.status) b.status = b.read ? "read" : "unread"; }));
+state.libs.forEach(l => l.books.forEach(b => {
+  if (!b.status) b.status = b.read ? "read" : "unread";
+  /* Anciennes versions : les mentions « Sans titre » / « Auteur inconnu » étaient enregistrées dans la langue du moment.
+     On les retire pour les afficher dans la langue courante. */
+  if (b.title === "Sans titre" || b.title === "Untitled") b.title = "";
+  if (b.author === "Auteur inconnu" || b.author === "Unknown author") b.author = "";
+}));
 if (!state.libs.some(l => l.id === state.currentId)) state.currentId = state.libs[0] ? state.libs[0].id : null;
 
 const persist = () => { try { localStorage.setItem(STORE, JSON.stringify(state)); } catch (e) {} };
 const currentLib = () => state.libs.find(l => l.id === state.currentId) || null;
 const books = () => { const l = currentLib(); return l ? l.books : []; };
 const saved = id => books().find(b => b.id === id);
-const STATUS_LABELS = { unread: "Non lu", reading: "En cours", read: "Lu" };
+const statusLabel = s => t({ unread: "stUnread", reading: "stReading", read: "stRead" }[s]);
+
+/* Affichage des livres : titre, auteur et descriptif de repli dans la langue de l'interface.
+   Les livres de démonstration (id « demo-… ») sont aussi décrits dans la langue de l'interface. */
+const titleOf = b => b.title || t("untitled");
+const authorOf = b => b.author || t("unknownAuthor");
+function descOf(b) {
+  const demo = window.DEMO_LIBRARY && /^demo-/.test(b.id) && window.DEMO_LIBRARY.books.find(x => x.id === b.id);
+  if (demo && I18N.getLang() === "en" && demo.descriptionEn) return demo.descriptionEn;
+  return b.description || t("noDesc");
+}
 
 /* ---------- Raccourcis et état ---------- */
 const $ = id => document.getElementById(id);
@@ -73,13 +90,13 @@ if (document.fonts) document.fonts.ready.then(fitName);
 
 function renderHeader() {
   const lib = currentLib();
-  $("libName").textContent = lib ? lib.name : "Aucune bibliothèque";
+  $("libName").textContent = lib ? lib.name : t("noLibrary");
   fitName();
   const list = $("libList");
   if (!state.libs.length) {
     const p = document.createElement("p");
     p.className = "lib-empty";
-    p.textContent = "Aucune bibliothèque pour le moment.";
+    p.textContent = t("noLibraryYet");
     list.replaceChildren(p);
     return;
   }
@@ -102,8 +119,8 @@ function renderHeader() {
     });
     row.append(
       b,
-      actionBtn("Renommer", ICON_EDIT, "", () => { closeMenu(); askRenameLibrary(l.id); }),
-      actionBtn("Supprimer", ICON_TRASH, " del", () => { closeMenu(); askDeleteLibrary(l.id); })
+      actionBtn(t("rename"), ICON_EDIT, "", () => { closeMenu(); askRenameLibrary(l.id); }),
+      actionBtn(t("remove"), ICON_TRASH, " del", () => { closeMenu(); askDeleteLibrary(l.id); })
     );
     return row;
   }));
@@ -160,8 +177,8 @@ document.addEventListener("keydown", e => {
 function askNewLibrary(callback) {
   afterCreate = callback || null;
   editingId = null;
-  $("libTitle").textContent = "Créer une nouvelle bibliothèque";
-  $("libSubmit").textContent = "Créer";
+  $("libTitle").textContent = t("createLibTitle");
+  $("libSubmit").textContent = t("create");
   $("libForm").reset();
   $("libDlg").showModal();
   $("libInput").focus();
@@ -171,8 +188,8 @@ function askRenameLibrary(id) {
   const l = state.libs.find(x => x.id === id); if (!l) return;
   afterCreate = null;
   editingId = id;
-  $("libTitle").textContent = "Renommer la bibliothèque";
-  $("libSubmit").textContent = "Enregistrer";
+  $("libTitle").textContent = t("renameLibTitle");
+  $("libSubmit").textContent = t("save");
   $("libInput").value = l.name;
   $("libDlg").showModal();
   $("libInput").select();
@@ -181,7 +198,7 @@ function askRenameLibrary(id) {
 function askDeleteLibrary(id) {
   const l = state.libs.find(x => x.id === id); if (!l) return;
   delId = id;
-  $("delText").textContent = "Supprimer « " + l.name + " » et les " + l.books.length + " livre(s) qu'elle contient ? Cette action est irréversible.";
+  $("delText").textContent = t(l.books.length === 0 ? "deleteTextEmpty" : l.books.length === 1 ? "deleteText1" : "deleteTextN", { name: l.name, n: l.books.length });
   $("delDlg").showModal();
 }
 $("delConfirm").addEventListener("click", () => {
@@ -240,7 +257,7 @@ $("searchForm").addEventListener("submit", async e => {
   e.preventDefault();
   const q = $("q").value.trim();
   if (!q) return;
-  setStatus("Recherche en cours…");
+  setStatus("searching");
   try {
     const url = "https://www.googleapis.com/books/v1/volumes?maxResults=18&printType=books&q="
       + encodeURIComponent(q) + (API_KEY ? "&key=" + API_KEY : "");
@@ -249,14 +266,14 @@ $("searchForm").addEventListener("submit", async e => {
     const data = await res.json();
     const found = (data.items || []).map(toBook);
     showResults(found);
-    setStatus(found.length ? "" : "Aucun résultat. Essayez un autre titre ou un nom d'auteur.");
+    setStatus(found.length ? "" : "noResults");
   } catch (err) {
     if (err.code === 429 || err.code === 403) {
-      setStatus("Limite de requêtes Google atteinte ou clé refusée (erreur " + err.code + "). Réessayez dans un moment.", true);
+      setStatus("errLimit", true, { code: err.code });
     } else if (err.code) {
-      setStatus("Google Books a répondu par une erreur " + err.code + ". Réessayez.", true);
+      setStatus("errHttp", true, { code: err.code });
     } else {
-      setStatus("Requête bloquée ou pas de connexion. Ouvrez la page directement dans votre navigateur et vérifiez votre connexion.", true);
+      setStatus("errNetwork", true);
     }
   }
 });
@@ -285,8 +302,8 @@ function toBook(item) {
   const img = (v.imageLinks && (v.imageLinks.thumbnail || v.imageLinks.smallThumbnail)) || "";
   return {
     id: item.id,
-    title: v.title || "Sans titre",
-    author: (v.authors || ["Auteur inconnu"]).join(", "),
+    title: v.title || "",   /* « Sans titre » / « Auteur inconnu » s'affichent dans la langue de l'interface (titleOf, authorOf) */
+    author: (v.authors || []).join(", "),
     year: (v.publishedDate || "").slice(0, 4),
     cover: img.replace("http://", "https://"),
     isbn,
@@ -294,9 +311,12 @@ function toBook(item) {
   };
 }
 
-function setStatus(msg, isErr) {
+/* Message d'état : on garde la clé pour pouvoir le retraduire si la langue change */
+let statusState = { key: "", isErr: false, params: null };
+function setStatus(key, isErr, params) {
+  statusState = { key: key || "", isErr: !!isErr, params: params || null };
   const s = $("status");
-  s.textContent = msg;
+  s.textContent = key ? t(key, params) : "";
   s.classList.toggle("err", !!isErr);
 }
 
@@ -304,7 +324,7 @@ function setStatus(msg, isErr) {
 function coverPlaceholder(book) {
   const d = document.createElement("div");
   d.className = "cover nocover";
-  d.textContent = book.title;
+  d.textContent = titleOf(book);
   return d;
 }
 
@@ -318,7 +338,7 @@ function coverEl(book) {
 
   const img = document.createElement("img");
   img.className = "cover";
-  img.alt = "Couverture de " + book.title;
+  img.alt = t("coverOf", { title: titleOf(book) });
   let i = 0;
   const next = () => {
     i++;
@@ -345,25 +365,27 @@ function card(book, withBadges) {
   const frame = document.createElement("button");   /* cadre + couverture = zone cliquable */
   frame.type = "button";
   frame.className = "frame";
-  frame.setAttribute("aria-label", "Ouvrir la fiche : " + book.title);
+  frame.setAttribute("aria-label", t("openSheet", { title: titleOf(book) }));
   frame.appendChild(coverEl(book));
   frame.addEventListener("click", () => openBook(book));
   b.appendChild(frame);
-  const t = document.createElement("span"); t.className = "t"; t.textContent = book.title;
-  const a = document.createElement("span"); a.className = "a"; a.textContent = book.author;
-  b.append(t, a);
+  const ti = document.createElement("span"); ti.className = "t"; ti.textContent = titleOf(book);
+  const a = document.createElement("span"); a.className = "a"; a.textContent = authorOf(book);
+  b.append(ti, a);
   if (withBadges) {
     const w = document.createElement("span"); w.className = "badges";
     w.append(
-      badge(STATUS_LABELS[book.status], book.status !== "unread"),
-      badge(book.owned ? "Possédé" : "Non possédé", book.owned)
+      badge(statusLabel(book.status), book.status !== "unread"),
+      badge(book.owned ? t("owned") : t("notOwned"), book.owned)
     );
     b.appendChild(w);
   }
   return b;
 }
 
+let lastFound = [];
 function showResults(found) {
+  lastFound = found;
   $("results").replaceChildren(...found.map(b => card(saved(b.id) || b, !!saved(b.id))));
   $("resultsSection").hidden = !found.length;
 }
@@ -380,8 +402,8 @@ function renderLibrary() {
   if (!list.length) {
     const p = document.createElement("p");
     p.className = "empty";
-    p.textContent = !currentLib() ? "Créez une bibliothèque pour commencer." :
-      books().length ? "Aucun livre dans cette catégorie." : "Cette bibliothèque est vide. Recherchez un livre pour l'ajouter.";
+    p.textContent = !currentLib() ? t("emptyNoLib") :
+      books().length ? t("emptyFilter") : t("emptyLib");
     box.replaceChildren(p);
     return;
   }
@@ -391,9 +413,9 @@ function renderLibrary() {
 function renderAll() { renderHeader(); renderLibrary(); }
 
 $("tabs").addEventListener("click", e => {
-  const t = e.target.closest(".tab"); if (!t) return;
+  const tab = e.target.closest(".tab"); if (!tab) return;
   /* Un second clic sur le filtre actif le désélectionne : retour à « Tous » */
-  filter = (t.dataset.f !== "all" && t.dataset.f === filter) ? "all" : t.dataset.f;
+  filter = (tab.dataset.f !== "all" && tab.dataset.f === filter) ? "all" : tab.dataset.f;
   document.querySelectorAll("#tabs .tab").forEach(x => x.setAttribute("aria-pressed", x.dataset.f === filter));
   renderLibrary();
 });
@@ -411,12 +433,12 @@ function openBook(book) {
   f.className = "frame static";
   f.appendChild(coverEl(book));
   $("coverBox").replaceChildren(f);
-  $("dTitle").textContent = book.title;
-  $("dAuthor").textContent = book.author;
+  $("dTitle").textContent = titleOf(book);
+  $("dAuthor").textContent = authorOf(book);
   $("dYear").textContent = book.year;
-  $("dDesc").textContent = book.description || "Aucun descriptif disponible pour ce livre.";
+  $("dDesc").textContent = descOf(book);
   $("dDesc").hidden = true;
-  $("descBtn").textContent = "Voir le descriptif";
+  $("descBtn").textContent = t("showDesc");
   $("removeBtn").hidden = !s;
   syncChoices();
   $("dlg").showModal();
@@ -424,7 +446,7 @@ function openBook(book) {
 
 $("descBtn").addEventListener("click", () => {
   const d = $("dDesc"); d.hidden = !d.hidden;
-  $("descBtn").textContent = d.hidden ? "Voir le descriptif" : "Masquer le descriptif";
+  $("descBtn").textContent = d.hidden ? t("showDesc") : t("hideDesc");
 });
 
 document.querySelectorAll("[data-status]").forEach(b => b.addEventListener("click", () => {
@@ -465,4 +487,13 @@ $("removeBtn").addEventListener("click", () => {
 
 $("dlg").addEventListener("click", e => { if (e.target === $("dlg")) $("dlg").close(); });
 
+/* ---------- Langue de l'interface (FR / EN) ---------- */
+document.querySelectorAll("[data-lang]").forEach(b => b.addEventListener("click", () => I18N.setLang(b.dataset.lang)));
+I18N.onChange(() => {
+  setStatus(statusState.key, statusState.isErr, statusState.params);
+  if (!$("resultsSection").hidden) showResults(lastFound);
+  renderAll();
+});
+
+I18N.applyStatic();
 renderAll();

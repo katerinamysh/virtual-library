@@ -53,7 +53,12 @@ button:not(:disabled):not(.icon-btn):hover{transform:scale(var(--zoom,1.05))}
 
 /* ---------- 3. En-tête ---------- */
 header,main{max-width:1140px;margin:0 auto;padding:0 20px}      /* 6 livres par ligne au maximum */
-header{padding-top:64px}
+header{position:relative;padding-top:64px}
+
+/* Choix de la langue (FR / EN), en haut à droite */
+.lang{position:absolute;top:16px;right:20px;display:flex;gap:4px}
+.lang button{padding:1px 8px;border:2px solid var(--ink);border-radius:0;background:var(--beige);color:var(--ink);font-size:.8rem;letter-spacing:.06em}
+.lang button[aria-pressed="true"]{background:var(--mahogany);border-color:var(--mahogany);color:var(--beige)}
 header h1{margin:0;font:700 clamp(1.9rem,7vw,2.9rem)/1 var(--font-display);letter-spacing:.05em;text-transform:uppercase;white-space:nowrap;text-align:center}
 
 /* Frise : taille fixe, centrée, rognée des deux côtés si l'écran est plus étroit */
