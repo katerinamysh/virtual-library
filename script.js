@@ -264,6 +264,50 @@ async function fetchWithRetry(url, tries = 3) {
   return res;
 }
 
+/* Résultats par pages de lignes complètes : ROWS lignes à la fois, puis « Afficher plus ».
+   On demande BATCH résultats à Google, on n'affiche que des lignes entières et on garde le reste en réserve ;
+   la dernière page peut être incomplète seulement quand il n'y a plus rien à charger. */
+const ROWS = 4;
+const BATCH = 40;   /* maximum autorisé par l'API Google Books */
+let search = null;  /* recherche en cours : { q, buffer, start, exhausted, seen } */
+
+/* Nombre de colonnes réellement affichées (même grille que la bibliothèque) */
+function visibleColumns() {
+  const n = getComputedStyle($("library")).gridTemplateColumns.split(" ").filter(x => x && x !== "none").length;
+  return Math.max(1, n);
+}
+
+async function fetchInto(s) {
+  const url = "https://www.googleapis.com/books/v1/volumes?maxResults=" + BATCH + "&startIndex=" + s.start
+    + "&printType=books&q=" + encodeURIComponent(s.q) + (API_KEY ? "&key=" + API_KEY : "");
+  const res = await fetchWithRetry(url);
+  if (res.status === 400 && s.start > 0) { s.exhausted = true; return; }   /* au-delà de la fin des résultats */
+  if (!res.ok) { const er = new Error("http"); er.code = res.status; throw er; }
+  const data = await res.json();
+  const items = data.items || [];
+  s.start += BATCH;
+  if (!items.length) s.exhausted = true;
+  items.map(toBook).forEach(b => { if (!s.seen.has(b.id)) { s.seen.add(b.id); s.buffer.push(b); } });
+}
+
+/* Renvoie les livres de la prochaine page et dit s'il en reste */
+async function takePage(s) {
+  const size = visibleColumns() * ROWS;
+  let guard = 0;
+  while (s.buffer.length <= size && !s.exhausted && guard++ < 6) {
+    try { await fetchInto(s); }
+    catch (err) { if (!s.buffer.length) throw err; break; }   /* on affiche ce qu'on a ; « Afficher plus » permettra de réessayer */
+  }
+  const items = s.buffer.splice(0, size);
+  return { items, hasMore: s.buffer.length > 0 || !s.exhausted };
+}
+
+function reportError(err) {
+  if (err.code === 429 || err.code === 403) setStatus("errLimit", true, { code: err.code });
+  else if (err.code) setStatus("errHttp", true, { code: err.code });
+  else setStatus("errNetwork", true);
+}
+
 $("searchForm").addEventListener("submit", async e => {
   e.preventDefault();
   const q = $("q").value.trim();
@@ -271,23 +315,32 @@ $("searchForm").addEventListener("submit", async e => {
   libQuery = "";
   renderLibrary();
   setStatus("searching");
+  const s = search = { q, buffer: [], start: 0, exhausted: false, seen: new Set() };
   try {
-    const url = "https://www.googleapis.com/books/v1/volumes?maxResults=18&printType=books&q="
-      + encodeURIComponent(q) + (API_KEY ? "&key=" + API_KEY : "");
-    const res = await fetchWithRetry(url);
-    if (!res.ok) { const er = new Error("http"); er.code = res.status; throw er; }
-    const data = await res.json();
-    const found = (data.items || []).map(toBook);
-    showResults(found);
-    setStatus(found.length ? "" : "noResults");
+    const page = await takePage(s);
+    if (s !== search) return;   /* une recherche plus récente a pris le relais */
+    showResults(page.items);
+    $("moreBtn").hidden = !page.hasMore;
+    setStatus(page.items.length ? "" : "noResults");
   } catch (err) {
-    if (err.code === 429 || err.code === 403) {
-      setStatus("errLimit", true, { code: err.code });
-    } else if (err.code) {
-      setStatus("errHttp", true, { code: err.code });
-    } else {
-      setStatus("errNetwork", true);
-    }
+    if (s === search) reportError(err);
+  }
+});
+
+$("moreBtn").addEventListener("click", async () => {
+  const s = search; if (!s) return;
+  $("moreBtn").disabled = true;
+  setStatus("searching");
+  try {
+    const page = await takePage(s);
+    if (s !== search) return;
+    appendResults(page.items);
+    $("moreBtn").hidden = !page.hasMore;
+    setStatus(page.items.length ? "" : "noMore");
+  } catch (err) {
+    if (s === search) reportError(err);
+  } finally {
+    $("moreBtn").disabled = false;
   }
 });
 
@@ -398,10 +451,15 @@ function card(book, withBadges) {
 }
 
 let lastFound = [];
+const resultCard = b => card(saved(b.id) || b, !!saved(b.id));
 function showResults(found) {
   lastFound = found;
-  $("results").replaceChildren(...found.map(b => card(saved(b.id) || b, !!saved(b.id))));
+  $("results").replaceChildren(...found.map(resultCard));
   $("resultsSection").hidden = !found.length;
+}
+function appendResults(more) {   /* « Afficher plus » : on ajoute sans recharger les cartes déjà affichées */
+  lastFound = lastFound.concat(more);
+  $("results").append(...more.map(resultCard));
 }
 $("closeResults").addEventListener("click", () => { $("resultsSection").hidden = true; });
 
