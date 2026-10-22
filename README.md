@@ -46,7 +46,7 @@ window.APP_CONFIG = {
 };
 ```
 
-Sur un site public, une clé est visible par tous les visiteurs. Utilisez une clé dédiée, restreinte à l'adresse du site (restriction « Websites ») et à l'API Books, avec un quota quotidien. Ne publiez jamais une clé non restreinte.
+Sur un site public, une clé est visible par tous les visiteurs. Utilisez une clé dédiée, restreinte au domaine du site (restriction « Websites », par exemple `https://votre-compte.github.io/*`, car le navigateur n'envoie que le domaine) et à l'API Books, avec un quota quotidien. Ne publiez jamais une clé non restreinte.
 
 ## Structure
 
@@ -62,7 +62,7 @@ docs/           captures d'écran du README
 
 ## Licence
 
-Code publié sous licence [MIT](LICENSE). Les polices du dossier `fonts/` sont sous licence SIL Open Font (voir les fichiers `LICENSE-*.txt`).
+Code publié sous licence [MIT](LICENSE). Les polices du dossier `fonts/` sont sous licence SIL Open Font (voir les fichiers `LICENSE-*.txt`). L'image `separateur.webp` a été créée sur Canva et n'est pas couverte par la licence MIT.
 
 ## Limites connues
 
