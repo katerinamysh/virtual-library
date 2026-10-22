@@ -254,12 +254,18 @@ $("libDlg").addEventListener("close", () => { afterCreate = null; editingId = nu
 $("libDlg").addEventListener("click", e => { if (e.target === $("libDlg")) { afterCreate = null; $("libDlg").close(); } });
 
 /* ---------- Recherche Google Books ---------- */
-async function fetchWithRetry(url, tries = 3) {
+/* Google Books répond parfois par une erreur 500/503 passagère (« backendFailed »). On réessaie jusqu'à 5 fois,
+   avec des pauses qui s'allongent ; makeUrl(i) reçoit le numéro de la tentative pour pouvoir alléger la requête. */
+const RETRY_DELAYS = [1000, 2000, 4000, 6000];
+async function fetchWithRetry(makeUrl, onRetry) {
   let res;
-  for (let i = 0; i < tries; i++) {
-    res = await fetch(url);
+  for (let i = 0; i <= RETRY_DELAYS.length; i++) {
+    res = await fetch(makeUrl(i));
     if (res.status !== 500 && res.status !== 503) return res;
-    await new Promise(r => setTimeout(r, 800 * (i + 1)));
+    if (i < RETRY_DELAYS.length) {
+      if (onRetry) onRetry(i + 2, RETRY_DELAYS.length + 1);
+      await new Promise(r => setTimeout(r, RETRY_DELAYS[i]));
+    }
   }
   return res;
 }
@@ -268,7 +274,8 @@ async function fetchWithRetry(url, tries = 3) {
    On demande BATCH résultats à Google, on n'affiche que des lignes entières et on garde le reste en réserve ;
    la dernière page peut être incomplète seulement quand il n'y a plus rien à charger. */
 const ROWS = 4;
-const BATCH = 40;   /* maximum autorisé par l'API Google Books */
+const BATCH = 40;         /* maximum autorisé par l'API Google Books */
+const BATCH_SMALL = 20;   /* requête allégée, utilisée dès la 3e tentative après des erreurs */
 let search = null;  /* recherche en cours : { q, buffer, start, exhausted, seen } */
 
 /* Nombre de colonnes réellement affichées (même grille que la bibliothèque) */
@@ -278,14 +285,18 @@ function visibleColumns() {
 }
 
 async function fetchInto(s) {
-  const url = "https://www.googleapis.com/books/v1/volumes?maxResults=" + BATCH + "&startIndex=" + s.start
-    + "&printType=books&q=" + encodeURIComponent(s.q) + (API_KEY ? "&key=" + API_KEY : "");
-  const res = await fetchWithRetry(url);
+  let used = BATCH;   /* nombre de résultats réellement demandé (la requête s'allège après des échecs) */
+  const makeUrl = i => {
+    used = i >= 2 ? BATCH_SMALL : BATCH;
+    return "https://www.googleapis.com/books/v1/volumes?maxResults=" + used + "&startIndex=" + s.start
+      + "&printType=books&q=" + encodeURIComponent(s.q) + (API_KEY ? "&key=" + API_KEY : "");
+  };
+  const res = await fetchWithRetry(makeUrl, (n, max) => setStatus("retrying", false, { n, max }));
   if (res.status === 400 && s.start > 0) { s.exhausted = true; return; }   /* au-delà de la fin des résultats */
   if (!res.ok) { const er = new Error("http"); er.code = res.status; throw er; }
   const data = await res.json();
   const items = data.items || [];
-  s.start += BATCH;
+  s.start += used;
   if (!items.length) s.exhausted = true;
   items.map(toBook).forEach(b => { if (!s.seen.has(b.id)) { s.seen.add(b.id); s.buffer.push(b); } });
 }
