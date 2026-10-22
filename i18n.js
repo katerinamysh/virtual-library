@@ -71,7 +71,11 @@
       deleteText1: "Supprimer « {name} » et le livre qu'elle contient ? Cette action est irréversible.",
       deleteTextN: "Supprimer « {name} » et les {n} livres qu'elle contient ? Cette action est irréversible.",
       deleteTextEmpty: "Supprimer « {name} » ? Cette action est irréversible.",
-      deleteConfirm: "Supprimer"
+      deleteConfirm: "Supprimer",
+      dupTitle: "Un livre similaire a déjà été ajouté",
+      dupText: "Voici le livre déjà présent dans « {name} » :",
+      dupAsk: "Voulez-vous quand même ajouter celui que vous venez de choisir ?",
+      dupAdd: "Ajouter quand même"
     },
     en: {
       pageTitle: "My library · virtual library",
@@ -139,7 +143,11 @@
       deleteText1: "Delete “{name}” and the book it contains? This cannot be undone.",
       deleteTextN: "Delete “{name}” and the {n} books it contains? This cannot be undone.",
       deleteTextEmpty: "Delete “{name}”? This cannot be undone.",
-      deleteConfirm: "Delete"
+      deleteConfirm: "Delete",
+      dupTitle: "A similar book has already been added",
+      dupText: "Here is the book already in “{name}”:",
+      dupAsk: "Do you still want to add the one you just picked?",
+      dupAdd: "Add anyway"
     }
   };
 

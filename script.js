@@ -506,7 +506,52 @@ function syncChoices() {
   $("saveBtn").disabled = draft.status === null || draft.owned === null;
 }
 
+/* Livre « similaire » déjà dans la bibliothèque : même ISBN, ou même titre (ou titre qui commence pareil) avec un auteur commun.
+   Une autre édition a un autre identifiant Google, d'où cette comparaison sur le contenu. */
+const normTitle = s => normText(s).replace(/[^a-z0-9]+/g, " ").trim();
+const authorWords = s => normText(s).split(/[^a-z0-9]+/).filter(w => w.length >= 3);
+function findSimilar(b) {
+  const nt = normTitle(b.title), aw = authorWords(b.author);
+  return books().find(x => {
+    if (x.id === b.id) return false;
+    if (b.isbn && x.isbn === b.isbn) return true;
+    const xt = normTitle(x.title);
+    if (!nt || !xt) return false;
+    const xw = authorWords(x.author);
+    const common = aw.some(w => xw.includes(w));
+    if (nt === xt) return !aw.length || !xw.length || common;
+    const [short, long] = nt.length <= xt.length ? [nt, xt] : [xt, nt];
+    return short.length >= 5 && long.startsWith(short + " ") && common;
+  }) || null;
+}
+
+function showDuplicate(sim) {
+  $("dupText").textContent = t("dupText", { name: currentLib().name });
+  const f = document.createElement("span");
+  f.className = "frame static";
+  f.appendChild(coverEl(sim));
+  const info = document.createElement("div");
+  const ti = document.createElement("p"); ti.className = "dup-title"; ti.textContent = titleOf(sim);
+  const au = document.createElement("p"); au.className = "meta"; au.textContent = [authorOf(sim), sim.year].filter(Boolean).join(" · ");
+  const bd = document.createElement("span"); bd.className = "badges";
+  bd.append(badge(statusLabel(sim.status), sim.status !== "unread"), badge(sim.owned ? t("owned") : t("notOwned"), sim.owned));
+  info.append(ti, au, bd);
+  $("dupBox").replaceChildren(f, info);
+  $("dupDlg").showModal();
+}
+$("dupCancel").addEventListener("click", () => $("dupDlg").close());   /* on reste sur la fiche du livre */
+$("dupDlg").addEventListener("click", e => { if (e.target === $("dupDlg")) $("dupDlg").close(); });
+$("dupAdd").addEventListener("click", () => { $("dupDlg").close(); commitBook(); });
+
 $("saveBtn").addEventListener("click", () => {
+  if (current && !saved(current.id)) {   /* nouvel ajout : on prévient s'il en existe un similaire */
+    const sim = findSimilar(current);
+    if (sim) { showDuplicate(sim); return; }
+  }
+  commitBook();
+});
+
+function commitBook() {
   const lib = currentLib();
   const entry = { ...current, status: draft.status, owned: draft.owned };
   delete entry.read;
@@ -516,7 +561,7 @@ $("saveBtn").addEventListener("click", () => {
   renderLibrary();
   $("resultsSection").hidden = true;
   $("dlg").close();
-});
+}
 
 $("removeBtn").addEventListener("click", () => {
   const lib = currentLib();
