@@ -26,8 +26,8 @@ if (!state.libs.length) {
 let firstVisit = false;
 try { firstVisit = localStorage.getItem(STORE) === null && localStorage.getItem(OLD_KEY) === null; } catch (e) {}
 if (firstVisit && !state.libs.length && window.DEMO_LIBRARY) {
-  const d = window.DEMO_LIBRARY;
-  state.libs.push({ id: uid(), name: (I18N.getLang() === "en" && d.nameEn) || d.name, books: d.books.map(b => ({ ...b, cover: "", isbn: "" })) });
+  const d = window.DEMO_LIBRARY[I18N.getLang()] || window.DEMO_LIBRARY.fr;   /* classiques français ou anglais selon la langue */
+  state.libs.push({ id: uid(), name: d.name, books: d.books.map(b => ({ ...b, cover: "" })) });
   state.currentId = state.libs[0].id;
 }
 state.libs.forEach(l => l.books.forEach(b => {
@@ -45,15 +45,10 @@ const books = () => { const l = currentLib(); return l ? l.books : []; };
 const saved = id => books().find(b => b.id === id);
 const statusLabel = s => t({ unread: "stUnread", reading: "stReading", read: "stRead" }[s]);
 
-/* Affichage des livres : titre, auteur et descriptif de repli dans la langue de l'interface.
-   Les livres de démonstration (id « demo-… ») sont aussi décrits dans la langue de l'interface. */
+/* Affichage des livres : titre, auteur et descriptif de repli dans la langue de l'interface. */
 const titleOf = b => b.title || t("untitled");
 const authorOf = b => b.author || t("unknownAuthor");
-function descOf(b) {
-  const demo = window.DEMO_LIBRARY && /^demo-/.test(b.id) && window.DEMO_LIBRARY.books.find(x => x.id === b.id);
-  if (demo && I18N.getLang() === "en" && demo.descriptionEn) return demo.descriptionEn;
-  return b.description || t("noDesc");
-}
+const descOf = b => b.description || t("noDesc");
 
 /* ---------- Raccourcis et état ---------- */
 const $ = id => document.getElementById(id);
