@@ -262,11 +262,34 @@ async function fetchOnce(url) {
   catch (e) { if (e.name === "AbortError") return { ok: false, status: 408 }; throw e; }   /* trop long : traité comme une erreur passagère */
   finally { clearTimeout(timer); }
 }
+const RETRYABLE = [500, 503, 408];
+const HEDGE_AFTER = 2500;
+/* Requête « doublée » : si la réponse tarde plus de HEDGE_AFTER ms, on envoie la même requête une seconde fois et on garde
+   la première bonne réponse. Une erreur Google arrive souvent après plusieurs secondes : on n'attend plus qu'elle passe. */
+function fetchHedged(url) {
+  return new Promise((resolve, reject) => {
+    let open = 0, done = false, bad = null, hedge = null;
+    const end = fn => { if (done) return; done = true; clearTimeout(hedge); fn(); };
+    const start = () => {
+      open++;
+      fetchOnce(url).then(res => {
+        open--;
+        if (!RETRYABLE.includes(res.status)) end(() => resolve(res));
+        else { bad = res; if (open === 0) end(() => resolve(bad)); }
+      }, err => {
+        open--;
+        if (open === 0) end(() => (bad ? resolve(bad) : reject(err)));
+      });
+    };
+    start();
+    hedge = setTimeout(() => { if (!done) start(); }, HEDGE_AFTER);
+  });
+}
 async function fetchWithRetry(makeUrl, onRetry) {
   let res;
   for (let i = 0; i <= RETRY_DELAYS.length; i++) {
-    res = await fetchOnce(makeUrl(i));
-    if (![500, 503, 408].includes(res.status)) return res;
+    res = await fetchHedged(makeUrl(i));
+    if (!RETRYABLE.includes(res.status)) return res;
     if (i < RETRY_DELAYS.length) {
       if (onRetry) onRetry(i + 2, RETRY_DELAYS.length + 1);
       await new Promise(r => setTimeout(r, RETRY_DELAYS[i]));
@@ -279,13 +302,13 @@ async function fetchWithRetry(makeUrl, onRetry) {
    On demande BATCH résultats à Google, on n'affiche que des lignes entières et on garde le reste en réserve ;
    la dernière page peut être incomplète seulement quand il n'y a plus rien à charger. */
 const ROWS = 4;
-const BATCH = 40;         /* maximum autorisé par l'API Google Books */
+const BATCH = 30;         /* assez pour une page de 4 lignes de 6 livres (25 nécessaires) ; moins lourd que le maximum de 40 */
 const BATCH_SMALL = 20;   /* requête allégée, utilisée dès la 3e tentative après des erreurs */
 /* On ne demande que les champs utilisés : la réponse est bien plus légère (donc plus rapide à recevoir) */
 const FIELDS = "items(id,volumeInfo(title,authors,publishedDate,imageLinks,industryIdentifiers,description))";
-/* recherche en cours : { q, lang, phase, buffer, start, exhausted, seen, pre }.
+/* recherche en cours : { q, lang, phase, buffer, start, exhausted, seen }.
    phase 1 : livres dans la langue de l'interface d'abord (langRestrict) ; phase 2 : tous les autres, dans toutes les langues.
-   La 1re page de la phase 2 est demandée dès le départ, en même temps que la phase 1 (pre) : on n'attend pas deux fois. */
+   La phase 2 n'est demandée que si la phase 1 ne suffit pas à remplir la page : une recherche courante = une seule requête. */
 let search = null;
 
 /* Nombre de colonnes réellement affichées (même grille que la bibliothèque) */
@@ -295,7 +318,10 @@ function visibleColumns() {
 }
 
 /* Une page de résultats ; lang = null : toutes les langues */
+const pageCache = new Map();   /* pages déjà reçues pendant cette visite : relancer la même recherche est immédiat */
 async function requestPage(q, lang, start) {
+  const key = q.toLowerCase() + "|" + (lang || "") + "|" + start;
+  if (pageCache.has(key)) return pageCache.get(key);
   let used = BATCH;   /* nombre de résultats réellement demandé (la requête s'allège après des échecs) */
   const makeUrl = i => {
     used = i >= 2 ? BATCH_SMALL : BATCH;
@@ -308,20 +334,16 @@ async function requestPage(q, lang, start) {
   if (res.status === 400 && start > 0) return { items: [], used };   /* au-delà de la fin des résultats */
   if (!res.ok) { const er = new Error("http"); er.code = res.status; throw er; }
   const data = await res.json();
-  return { items: data.items || [], used };
+  const page = { items: data.items || [], used };
+  pageCache.set(key, page);
+  if (pageCache.size > 60) pageCache.delete(pageCache.keys().next().value);
+  return page;
 }
 
 async function fetchInto(s) {
   /* Fin de la phase 1 : on passe aux livres de toutes les langues (les livres déjà vus sont écartés) */
   const nextPhase = () => { if (s.phase === 1) { s.phase = 2; s.start = 0; } else s.exhausted = true; };
-  let got;
-  if (s.phase === 2 && s.start === 0 && s.pre) {   /* page déjà demandée en parallèle */
-    got = await s.pre;
-    s.pre = null;
-    if (got.error) throw got.error;
-  } else {
-    got = await requestPage(s.q, s.phase === 1 ? s.lang : null, s.start);
-  }
+  const got = await requestPage(s.q, s.phase === 1 ? s.lang : null, s.start);
   s.start += got.used;
   got.items.map(toBook).forEach(b => { if (!s.seen.has(b.id)) { s.seen.add(b.id); s.buffer.push(b); } });
   /* Page vide : fin. Page incomplète en phase 1 : fin aussi (la phase 2 reprend tout, rien n'est perdu) */
@@ -354,8 +376,7 @@ $("searchForm").addEventListener("submit", async e => {
   libQuery = "";
   renderLibrary();
   setStatus("searching");
-  const s = search = { q, lang: I18N.getLang(), phase: 1, buffer: [], start: 0, exhausted: false, seen: new Set(), pre: null };
-  s.pre = requestPage(q, null, 0).catch(error => ({ error }));   /* 1re page « toutes langues », demandée en parallèle */
+  const s = search = { q, lang: I18N.getLang(), phase: 1, buffer: [], start: 0, exhausted: false, seen: new Set() };
   try {
     const page = await takePage(s);
     if (s !== search) return;   /* une recherche plus récente a pris le relais */
@@ -445,6 +466,8 @@ function coverEl(book) {
 
   const img = document.createElement("img");
   img.className = "cover";
+  img.loading = "lazy";   /* les couvertures hors écran ne sont chargées qu'au défilement */
+  img.decoding = "async";
   img.alt = t("coverOf", { title: titleOf(book) });
   let i = 0;
   const next = () => {
