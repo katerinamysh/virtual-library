@@ -91,7 +91,7 @@ if (document.fonts) document.fonts.ready.then(fitName);
 function renderHeader() {
   const lib = currentLib();
   $("libName").textContent = lib ? lib.name : t("noLibrary");
-  /* Bouton « rechercher dans ma bibliothèque » : porte le nom de la bibliothèque active */
+  /* Bouton « Ma bibliothèque » : recherche dans la bibliothèque active (son nom complet est dans l'infobulle) */
   const sb = $("libSearchBtn");
   sb.hidden = !lib;
   if (lib) {
