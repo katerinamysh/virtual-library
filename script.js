@@ -250,14 +250,23 @@ $("libDlg").addEventListener("close", () => { afterCreate = null; editingId = nu
 $("libDlg").addEventListener("click", e => { if (e.target === $("libDlg")) { afterCreate = null; $("libDlg").close(); } });
 
 /* ---------- Recherche Google Books ---------- */
-/* Google Books répond parfois par une erreur 500/503 passagère (« backendFailed »). On réessaie jusqu'à 5 fois,
-   avec des pauses qui s'allongent ; makeUrl(i) reçoit le numéro de la tentative pour pouvoir alléger la requête. */
-const RETRY_DELAYS = [1000, 2000, 4000, 6000];
+/* Google Books répond parfois par une erreur 500/503 passagère (« backendFailed »), ou met très longtemps à répondre.
+   Chaque tentative est limitée dans le temps (FETCH_TIMEOUT) ; en cas d'échec on réessaie jusqu'à 4 fois, avec des pauses
+   qui s'allongent. makeUrl(i) reçoit le numéro de la tentative pour pouvoir alléger la requête. */
+let FETCH_TIMEOUT = 7000;
+const RETRY_DELAYS = [700, 1500, 3000];
+async function fetchOnce(url) {
+  const ctl = new AbortController();
+  const timer = setTimeout(() => ctl.abort(), FETCH_TIMEOUT);
+  try { return await fetch(url, { signal: ctl.signal }); }
+  catch (e) { if (e.name === "AbortError") return { ok: false, status: 408 }; throw e; }   /* trop long : traité comme une erreur passagère */
+  finally { clearTimeout(timer); }
+}
 async function fetchWithRetry(makeUrl, onRetry) {
   let res;
   for (let i = 0; i <= RETRY_DELAYS.length; i++) {
-    res = await fetch(makeUrl(i));
-    if (res.status !== 500 && res.status !== 503) return res;
+    res = await fetchOnce(makeUrl(i));
+    if (![500, 503, 408].includes(res.status)) return res;
     if (i < RETRY_DELAYS.length) {
       if (onRetry) onRetry(i + 2, RETRY_DELAYS.length + 1);
       await new Promise(r => setTimeout(r, RETRY_DELAYS[i]));
@@ -272,8 +281,11 @@ async function fetchWithRetry(makeUrl, onRetry) {
 const ROWS = 4;
 const BATCH = 40;         /* maximum autorisé par l'API Google Books */
 const BATCH_SMALL = 20;   /* requête allégée, utilisée dès la 3e tentative après des erreurs */
-/* recherche en cours : { q, lang, phase, buffer, start, exhausted, seen }.
-   phase 1 : livres dans la langue de l'interface d'abord (langRestrict) ; phase 2 : tous les autres, dans toutes les langues. */
+/* On ne demande que les champs utilisés : la réponse est bien plus légère (donc plus rapide à recevoir) */
+const FIELDS = "items(id,volumeInfo(title,authors,publishedDate,imageLinks,industryIdentifiers,description))";
+/* recherche en cours : { q, lang, phase, buffer, start, exhausted, seen, pre }.
+   phase 1 : livres dans la langue de l'interface d'abord (langRestrict) ; phase 2 : tous les autres, dans toutes les langues.
+   La 1re page de la phase 2 est demandée dès le départ, en même temps que la phase 1 (pre) : on n'attend pas deux fois. */
 let search = null;
 
 /* Nombre de colonnes réellement affichées (même grille que la bibliothèque) */
@@ -282,24 +294,38 @@ function visibleColumns() {
   return Math.max(1, n);
 }
 
-async function fetchInto(s) {
+/* Une page de résultats ; lang = null : toutes les langues */
+async function requestPage(q, lang, start) {
   let used = BATCH;   /* nombre de résultats réellement demandé (la requête s'allège après des échecs) */
   const makeUrl = i => {
     used = i >= 2 ? BATCH_SMALL : BATCH;
-    return "https://www.googleapis.com/books/v1/volumes?maxResults=" + used + "&startIndex=" + s.start
-      + (s.phase === 1 ? "&langRestrict=" + s.lang : "")
-      + "&printType=books&q=" + encodeURIComponent(s.q) + (API_KEY ? "&key=" + API_KEY : "");
+    return "https://www.googleapis.com/books/v1/volumes?maxResults=" + used + "&startIndex=" + start
+      + (lang ? "&langRestrict=" + lang : "")
+      + "&printType=books&fields=" + encodeURIComponent(FIELDS)
+      + "&q=" + encodeURIComponent(q) + (API_KEY ? "&key=" + API_KEY : "");
   };
-  /* Fin de la phase 1 : on repart du début, sans restriction de langue (les livres déjà vus sont écartés) */
-  const nextPhase = () => { if (s.phase === 1) { s.phase = 2; s.start = 0; } else s.exhausted = true; };
   const res = await fetchWithRetry(makeUrl, (n, max) => setStatus("retrying", false, { n, max }));
-  if (res.status === 400 && s.start > 0) { nextPhase(); return; }   /* au-delà de la fin des résultats */
+  if (res.status === 400 && start > 0) return { items: [], used };   /* au-delà de la fin des résultats */
   if (!res.ok) { const er = new Error("http"); er.code = res.status; throw er; }
   const data = await res.json();
-  const items = data.items || [];
-  if (!items.length) { nextPhase(); return; }
-  s.start += used;
-  items.map(toBook).forEach(b => { if (!s.seen.has(b.id)) { s.seen.add(b.id); s.buffer.push(b); } });
+  return { items: data.items || [], used };
+}
+
+async function fetchInto(s) {
+  /* Fin de la phase 1 : on passe aux livres de toutes les langues (les livres déjà vus sont écartés) */
+  const nextPhase = () => { if (s.phase === 1) { s.phase = 2; s.start = 0; } else s.exhausted = true; };
+  let got;
+  if (s.phase === 2 && s.start === 0 && s.pre) {   /* page déjà demandée en parallèle */
+    got = await s.pre;
+    s.pre = null;
+    if (got.error) throw got.error;
+  } else {
+    got = await requestPage(s.q, s.phase === 1 ? s.lang : null, s.start);
+  }
+  s.start += got.used;
+  got.items.map(toBook).forEach(b => { if (!s.seen.has(b.id)) { s.seen.add(b.id); s.buffer.push(b); } });
+  /* Page vide : fin. Page incomplète en phase 1 : fin aussi (la phase 2 reprend tout, rien n'est perdu) */
+  if (!got.items.length || (s.phase === 1 && got.items.length < got.used)) nextPhase();
 }
 
 /* Renvoie les livres de la prochaine page et dit s'il en reste */
@@ -315,7 +341,8 @@ async function takePage(s) {
 }
 
 function reportError(err) {
-  if (err.code === 429 || err.code === 403) setStatus("errLimit", true, { code: err.code });
+  if (err.code === 408) setStatus("errTimeout", true);
+  else if (err.code === 429 || err.code === 403) setStatus("errLimit", true, { code: err.code });
   else if (err.code) setStatus("errHttp", true, { code: err.code });
   else setStatus("errNetwork", true);
 }
@@ -327,7 +354,8 @@ $("searchForm").addEventListener("submit", async e => {
   libQuery = "";
   renderLibrary();
   setStatus("searching");
-  const s = search = { q, lang: I18N.getLang(), phase: 1, buffer: [], start: 0, exhausted: false, seen: new Set() };
+  const s = search = { q, lang: I18N.getLang(), phase: 1, buffer: [], start: 0, exhausted: false, seen: new Set(), pre: null };
+  s.pre = requestPage(q, null, 0).catch(error => ({ error }));   /* 1re page « toutes langues », demandée en parallèle */
   try {
     const page = await takePage(s);
     if (s !== search) return;   /* une recherche plus récente a pris le relais */
