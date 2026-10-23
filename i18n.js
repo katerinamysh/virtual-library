@@ -78,7 +78,24 @@
       dupTitle: "Un livre similaire a déjà été ajouté",
       dupText: "Voici le livre déjà présent dans « {name} » :",
       dupAsk: "Voulez-vous quand même ajouter celui que vous venez de choisir ?",
-      dupAdd: "Ajouter quand même"
+      dupAdd: "Ajouter quand même",
+      exportBtn: "Exporter mes bibliothèques",
+      importBtn: "Importer un fichier",
+      lastExport: "Dernier export : {date}",
+      noExport: "Aucun export pour l'instant",
+      nothingToExport: "Il n'y a rien à exporter : créez d'abord une bibliothèque.",
+      exported: "Fichier téléchargé : retrouvez-le dans votre dossier Téléchargements.",
+      errImport: "Ce fichier n'est pas une sauvegarde valide de Ma bibliothèque.",
+      importTitle: "Importer un fichier",
+      nLibs1: "1 bibliothèque", nLibsN: "{n} bibliothèques", nBooks1: "1 livre", nBooksN: "{n} livres",
+      importText: "Ce fichier contient {libs} et {books}.",
+      importMerge: "Fusionner",
+      importMergeInfo: "ajoute les livres du fichier à vos bibliothèques. Si un livre existe déjà, la version du fichier est conservée.",
+      importDemoNote: "La bibliothèque d'exemple sera retirée lors d'une fusion.",
+      importReplace: "Remplacer",
+      importReplaceInfo: "supprime les bibliothèques actuelles de cet appareil et les remplace par celles du fichier.",
+      importDoneMerge: "Import terminé — livres ajoutés : {added}, livres mis à jour : {updated}.",
+      importDoneReplace: "Import terminé — {libs} et {books}."
     },
     en: {
       pageTitle: "My library · virtual library",
@@ -153,7 +170,24 @@
       dupTitle: "A similar book has already been added",
       dupText: "Here is the book already in “{name}”:",
       dupAsk: "Do you still want to add the one you just picked?",
-      dupAdd: "Add anyway"
+      dupAdd: "Add anyway",
+      exportBtn: "Export my libraries",
+      importBtn: "Import a file",
+      lastExport: "Last export: {date}",
+      noExport: "No export yet",
+      nothingToExport: "Nothing to export: create a library first.",
+      exported: "File downloaded: look for it in your Downloads folder.",
+      errImport: "This file is not a valid backup of My library.",
+      importTitle: "Import a file",
+      nLibs1: "1 library", nLibsN: "{n} libraries", nBooks1: "1 book", nBooksN: "{n} books",
+      importText: "This file contains {libs} and {books}.",
+      importMerge: "Merge",
+      importMergeInfo: "adds the file's books to your libraries. If a book already exists, the version from the file is kept.",
+      importDemoNote: "The sample library will be removed when you merge.",
+      importReplace: "Replace",
+      importReplaceInfo: "deletes the libraries currently on this device and replaces them with the ones in the file.",
+      importDoneMerge: "Import complete — books added: {added}, books updated: {updated}.",
+      importDoneReplace: "Import complete — {libs} and {books}."
     }
   };
 

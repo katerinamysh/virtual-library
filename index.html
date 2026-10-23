@@ -30,6 +30,11 @@
       <button class="lib-item" id="newLibBtn" type="button" role="menuitem" data-i18n="newLibrary">+ Créer une nouvelle bibliothèque</button>
       <div class="lib-sep" role="separator"></div>
       <div id="libList" role="none"></div>
+      <div class="lib-sep" role="separator"></div>
+      <button class="lib-item" id="exportBtn" type="button" role="menuitem" data-i18n="exportBtn">Exporter mes bibliothèques</button>
+      <button class="lib-item" id="importBtn" type="button" role="menuitem" data-i18n="importBtn">Importer un fichier</button>
+      <p class="lib-note" id="exportNote"></p>
+      <input type="file" id="importFile" accept=".json,application/json" hidden>
     </div>
   </div>
   <form class="search" id="searchForm" role="search">
@@ -117,6 +122,21 @@
     <div class="actions">
       <button class="btn" id="dupCancel" type="button" data-i18n="cancel">Annuler</button>
       <button class="btn ghost" id="dupAdd" type="button" data-i18n="dupAdd">Ajouter quand même</button>
+    </div>
+  </div>
+</dialog>
+
+<dialog id="importDlg">
+  <div class="sheet">
+    <h2 data-i18n="importTitle">Importer un fichier</h2>
+    <p class="meta" id="importText"></p>
+    <p class="meta"><strong data-i18n="importMerge">Fusionner</strong> : <span data-i18n="importMergeInfo">ajoute les livres du fichier à vos bibliothèques. Si un livre existe déjà, la version du fichier est conservée.</span></p>
+    <p class="meta" id="importDemoNote" data-i18n="importDemoNote" hidden>La bibliothèque d'exemple sera retirée lors d'une fusion.</p>
+    <p class="meta"><strong data-i18n="importReplace">Remplacer</strong> : <span data-i18n="importReplaceInfo">supprime les bibliothèques actuelles de cet appareil et les remplace par celles du fichier.</span></p>
+    <div class="actions">
+      <button class="btn" id="importCancel" type="button" data-i18n="cancel">Annuler</button>
+      <button class="btn ghost danger" id="importReplaceBtn" type="button" data-i18n="importReplace">Remplacer</button>
+      <button class="btn" id="importMergeBtn" type="button" data-i18n="importMerge">Fusionner</button>
     </div>
   </div>
 </dialog>

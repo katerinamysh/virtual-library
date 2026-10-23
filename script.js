@@ -89,6 +89,7 @@ window.addEventListener("resize", fitName);
 if (document.fonts) document.fonts.ready.then(fitName);
 
 function renderHeader() {
+  renderExportNote();
   const lib = currentLib();
   $("libName").textContent = lib ? lib.name : t("noLibrary");
   /* Bouton « Ma bibliothèque » : recherche dans la bibliothèque active (son nom complet est dans l'infobulle) */
@@ -140,7 +141,7 @@ function closeMenu() {
   $("libBtn").setAttribute("aria-expanded", "false");
 }
 /* Lignes navigables du menu : « Créer… » puis une ligne par bibliothèque (nom, crayon, corbeille) */
-const menuRows = () => [$("newLibBtn"), ...document.querySelectorAll("#libList .lib-row")];
+const menuRows = () => [$("newLibBtn"), ...document.querySelectorAll("#libList .lib-row"), $("exportBtn"), $("importBtn")];
 function focusRow(i) {
   const rows = menuRows();
   const row = rows[(i + rows.length) % rows.length];
@@ -641,6 +642,118 @@ $("removeBtn").addEventListener("click", () => {
 });
 
 $("dlg").addEventListener("click", e => { if (e.target === $("dlg")) $("dlg").close(); });
+
+/* ---------- Export / import d'un fichier de sauvegarde (.json) ---------- */
+const EXPORT_APP = "ma-bibliotheque";
+const LAST_EXPORT_KEY = "ma-bibliotheque-lastexport";
+const MAX_IMPORT_BYTES = 5 * 1024 * 1024;
+
+function renderExportNote() {
+  let d = null;
+  try { d = localStorage.getItem(LAST_EXPORT_KEY); } catch (e) {}
+  $("exportNote").textContent = d ? t("lastExport", { date: new Date(d).toLocaleDateString(I18N.getLang()) }) : t("noExport");
+}
+
+const pad2 = n => String(n).padStart(2, "0");
+$("exportBtn").addEventListener("click", () => {
+  closeMenu();
+  if (!state.libs.length) { setStatus("nothingToExport"); return; }
+  const data = { app: EXPORT_APP, version: 2, exportedAt: new Date().toISOString(), libs: state.libs };
+  const url = URL.createObjectURL(new Blob([JSON.stringify(data, null, 2)], { type: "application/json" }));
+  const now = new Date();
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = "ma-bibliotheque-" + now.getFullYear() + "-" + pad2(now.getMonth() + 1) + "-" + pad2(now.getDate()) + ".json";
+  document.body.append(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+  try { localStorage.setItem(LAST_EXPORT_KEY, now.toISOString()); } catch (e) {}
+  renderExportNote();
+  setStatus("exported");
+});
+
+/* Un fichier importé n'est jamais cru sur parole : on ne garde que les champs connus, avec leur type et une taille maximale */
+const str = (v, max) => (v == null ? "" : String(v)).slice(0, max);
+function cleanBook(b) {
+  if (!b || typeof b !== "object" || !b.id) return null;
+  return {
+    id: str(b.id, 100), title: str(b.title, 300), author: str(b.author, 300), year: str(b.year, 10),
+    cover: /^https:\/\//i.test(b.cover) ? str(b.cover, 1000) : "", isbn: str(b.isbn, 20), description: str(b.description, 6000),
+    status: ["unread", "reading", "read"].includes(b.status) ? b.status : (b.read ? "read" : "unread"),
+    owned: b.owned === true
+  };
+}
+function parseImport(data) {
+  if (!data || typeof data !== "object" || !Array.isArray(data.libs) || !data.libs.length) return null;
+  const libs = data.libs.filter(l => l && typeof l === "object" && Array.isArray(l.books)).map(l => {
+    const seen = new Set();
+    const bks = l.books.map(cleanBook).filter(b => b && !seen.has(b.id) && seen.add(b.id));
+    return { id: str(l.id, 60) || uid(), name: str(l.name, 40).trim() || t("defaultLibName"), books: bks };
+  });
+  return libs.length ? libs : null;
+}
+
+const nLibs = n => t(n === 1 ? "nLibs1" : "nLibsN", { n });
+const nBooks = n => t(n === 1 ? "nBooks1" : "nBooksN", { n });
+const isDemoLib = l => l.books.length > 0 && l.books.every(b => /^demo-/.test(b.id));
+let pendingImport = null;
+
+$("importBtn").addEventListener("click", () => { closeMenu(); $("importFile").value = ""; $("importFile").click(); });
+$("importFile").addEventListener("change", async () => {
+  const f = $("importFile").files[0];
+  if (!f) return;
+  try {
+    if (f.size > MAX_IMPORT_BYTES) throw new Error("size");
+    const libs = parseImport(JSON.parse(await f.text()));
+    if (!libs) throw new Error("format");
+    pendingImport = libs;
+    $("importText").textContent = t("importText", { libs: nLibs(libs.length), books: nBooks(libs.reduce((n, l) => n + l.books.length, 0)) });
+    $("importDemoNote").hidden = !state.libs.some(isDemoLib);
+    $("importDlg").showModal();
+  } catch (err) {
+    setStatus("errImport", true);
+  }
+});
+
+function finishImport(msgKey, params) {
+  persist();
+  resetLibSearch();
+  $("resultsSection").hidden = true;
+  $("importDlg").close();
+  renderAll();
+  setStatus(msgKey, false, params);
+}
+
+$("importMergeBtn").addEventListener("click", () => {
+  if (!pendingImport) return;
+  let added = 0, updated = 0;
+  const keyOf = l => normText(l.name);
+  /* La bibliothèque d'exemple intacte est retirée, sauf si le fichier doit s'y fusionner */
+  state.libs = state.libs.filter(l => !isDemoLib(l) || pendingImport.some(il => il.id === l.id || keyOf(il) === keyOf(l)));
+  pendingImport.forEach(il => {
+    const lib = state.libs.find(l => l.id === il.id) || state.libs.find(l => keyOf(l) === keyOf(il));
+    if (!lib) { state.libs.push({ id: il.id, name: il.name, books: il.books }); added += il.books.length; return; }
+    il.books.forEach(b => {
+      const i = lib.books.findIndex(x => x.id === b.id);
+      if (i < 0) { lib.books.push(b); added++; return; }
+      if (lib.books[i].status !== b.status || lib.books[i].owned !== b.owned) updated++;
+      lib.books[i] = b;
+    });
+  });
+  if (!state.currentId || !currentLib()) state.currentId = state.libs[0].id;
+  finishImport("importDoneMerge", { added, updated });
+});
+
+$("importReplaceBtn").addEventListener("click", () => {
+  if (!pendingImport) return;
+  state.libs = pendingImport;
+  if (!currentLib()) state.currentId = state.libs[0].id;
+  finishImport("importDoneReplace", { libs: nLibs(state.libs.length), books: nBooks(state.libs.reduce((n, l) => n + l.books.length, 0)) });
+});
+$("importCancel").addEventListener("click", () => $("importDlg").close());
+$("importDlg").addEventListener("close", () => { pendingImport = null; });
+$("importDlg").addEventListener("click", e => { if (e.target === $("importDlg")) $("importDlg").close(); });
 
 /* ---------- Langue de l'interface (FR / EN) ---------- */
 document.querySelectorAll("[data-lang]").forEach(b => b.addEventListener("click", () => I18N.setLang(b.dataset.lang)));

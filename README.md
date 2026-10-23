@@ -18,6 +18,7 @@ Application web de bibliothèque virtuelle : on cherche un livre, on l'ajoute, p
 - **Filtres** : tous, en cours, lus, non lus, possédés, non possédés. Un second clic sur le filtre actif revient à « Tous ».
 - **Plusieurs bibliothèques** : création, renommage et suppression, avec un menu accessible au clavier (flèches, Échap).
 - **Interface en français et en anglais** (boutons FR / EN, langue du navigateur détectée à la première visite). La recherche, elle, n'est limitée à aucune langue : on peut ajouter des livres dans n'importe quelle langue, quelle que soit celle de l'interface.
+- **Export et import** : depuis le menu du logo, on télécharge toutes ses bibliothèques dans un fichier `.json` (avec la date de la dernière sauvegarde), puis on l'importe sur un autre appareil en choisissant de fusionner ou de remplacer. Le fichier importé est vérifié et nettoyé (champs connus, tailles limitées, couvertures en `https` uniquement).
 - **Sauvegarde locale** dans le navigateur (`localStorage`) : aucune donnée n'est envoyée à un serveur.
 
 ![Fiche d'un livre](docs/apercu-fiche.png)
@@ -71,5 +72,5 @@ Code publié sous licence [MIT](LICENSE). Les polices du dossier `fonts/` sont s
 
 ## Limites connues
 
-- Les données sont liées au navigateur : changer de navigateur ou vider ses données efface la bibliothèque. Un export et un import de fichier sont une piste d'amélioration.
+- Les données sont liées au navigateur : changer de navigateur ou vider ses données efface la bibliothèque. L'export et l'import de fichier permettent de les transférer ou de les sauvegarder, sans synchronisation automatique.
 - La recherche dépend de la disponibilité de l'API Google Books, qui répond parfois par une erreur 503.
