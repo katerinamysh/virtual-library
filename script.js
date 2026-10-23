@@ -272,7 +272,9 @@ async function fetchWithRetry(makeUrl, onRetry) {
 const ROWS = 4;
 const BATCH = 40;         /* maximum autorisé par l'API Google Books */
 const BATCH_SMALL = 20;   /* requête allégée, utilisée dès la 3e tentative après des erreurs */
-let search = null;  /* recherche en cours : { q, buffer, start, exhausted, seen } */
+/* recherche en cours : { q, lang, phase, buffer, start, exhausted, seen }.
+   phase 1 : livres dans la langue de l'interface d'abord (langRestrict) ; phase 2 : tous les autres, dans toutes les langues. */
+let search = null;
 
 /* Nombre de colonnes réellement affichées (même grille que la bibliothèque) */
 function visibleColumns() {
@@ -285,15 +287,18 @@ async function fetchInto(s) {
   const makeUrl = i => {
     used = i >= 2 ? BATCH_SMALL : BATCH;
     return "https://www.googleapis.com/books/v1/volumes?maxResults=" + used + "&startIndex=" + s.start
+      + (s.phase === 1 ? "&langRestrict=" + s.lang : "")
       + "&printType=books&q=" + encodeURIComponent(s.q) + (API_KEY ? "&key=" + API_KEY : "");
   };
+  /* Fin de la phase 1 : on repart du début, sans restriction de langue (les livres déjà vus sont écartés) */
+  const nextPhase = () => { if (s.phase === 1) { s.phase = 2; s.start = 0; } else s.exhausted = true; };
   const res = await fetchWithRetry(makeUrl, (n, max) => setStatus("retrying", false, { n, max }));
-  if (res.status === 400 && s.start > 0) { s.exhausted = true; return; }   /* au-delà de la fin des résultats */
+  if (res.status === 400 && s.start > 0) { nextPhase(); return; }   /* au-delà de la fin des résultats */
   if (!res.ok) { const er = new Error("http"); er.code = res.status; throw er; }
   const data = await res.json();
   const items = data.items || [];
+  if (!items.length) { nextPhase(); return; }
   s.start += used;
-  if (!items.length) s.exhausted = true;
   items.map(toBook).forEach(b => { if (!s.seen.has(b.id)) { s.seen.add(b.id); s.buffer.push(b); } });
 }
 
@@ -322,7 +327,7 @@ $("searchForm").addEventListener("submit", async e => {
   libQuery = "";
   renderLibrary();
   setStatus("searching");
-  const s = search = { q, buffer: [], start: 0, exhausted: false, seen: new Set() };
+  const s = search = { q, lang: I18N.getLang(), phase: 1, buffer: [], start: 0, exhausted: false, seen: new Set() };
   try {
     const page = await takePage(s);
     if (s !== search) return;   /* une recherche plus récente a pris le relais */
