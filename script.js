@@ -757,7 +757,28 @@ $("importDlg").addEventListener("click", e => { if (e.target === $("importDlg"))
 
 /* ---------- Langue de l'interface (FR / EN) ---------- */
 document.querySelectorAll("[data-lang]").forEach(b => b.addEventListener("click", () => I18N.setLang(b.dataset.lang)));
+/* Bibliothèque d'exemple : si elle n'a pas été transformée (aucun livre ajouté ni retiré), elle suit la langue de l'interface.
+   Les statuts déjà choisis sont conservés ; un nom personnalisé aussi. */
+function swapDemoLanguage() {
+  const D = window.DEMO_LIBRARY, lang = I18N.getLang(), other = lang === "fr" ? "en" : "fr";
+  if (!D || !D[lang] || !D[other]) return false;
+  const src = D[other].books;
+  let changed = false;
+  state.libs.forEach(l => {
+    const untouched = l.books.length === src.length && src.every(sb => l.books.some(b => b.id === sb.id));
+    if (!untouched) return;
+    l.books = D[lang].books.map((nb, i) => {
+      const old = l.books.find(b => b.id === src[i].id);
+      return { ...nb, cover: "", status: old.status, owned: old.owned };
+    });
+    if (l.name === D[other].name) l.name = D[lang].name;
+    changed = true;
+  });
+  return changed;
+}
+
 I18N.onChange(() => {
+  if (swapDemoLanguage()) persist();
   setStatus(statusState.key, statusState.isErr, statusState.params);
   if (!$("resultsSection").hidden) showResults(lastFound);
   renderAll();
