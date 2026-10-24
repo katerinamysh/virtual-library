@@ -105,6 +105,10 @@ input[type="search"]::-webkit-search-cancel-button{
 .tab{padding:2.5px 7px;border:2px solid var(--ink);border-radius:0;background:var(--beige);color:var(--ink);font-size:.9rem;letter-spacing:.04em}
 .tab[aria-pressed="true"]{background:var(--mahogany);border-color:var(--mahogany);color:var(--beige)}
 
+/* Liste déroulante des genres : même allure que les filtres, foncée quand un genre est choisi */
+.tab-select{max-width:100%;padding:2.5px 7px;border:2px solid var(--ink);border-radius:0;background:var(--beige);color:var(--ink);font:inherit;font-size:.9rem;letter-spacing:.04em;cursor:pointer}
+.tab-select.active{background:var(--mahogany);border-color:var(--mahogany);color:var(--beige)}
+
 /* ---------- 5. Livres ---------- */
 .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));column-gap:20px;row-gap:0;padding-bottom:48px}
 .more{display:flex;justify-content:center;margin:-8px 0 48px}
@@ -122,6 +126,11 @@ input[type="search"]::-webkit-search-cancel-button{
 .frame:focus-visible{transform:scale(1.06)}
 button.frame:hover .cover,button.frame:focus-visible .cover{box-shadow:inset 4px 0 0 rgba(0,0,0,.12),0 8px 18px rgba(0,0,0,.3)}
 .book.selected .frame{box-shadow:0 0 0 3px var(--bg),0 0 0 5px var(--beige),0 3px 8px rgba(0,0,0,.22)}   /* livre sélectionné : double cadre */
+
+/* Livre « en cours » : cadre en bois sombre, plus épais, avec un passe-partout beige autour de la couverture */
+.book.reading .frame{padding:3px;border-width:5px;border-color:#8a7461 #5f4a3b #4d3a2d #7d6755;
+  box-shadow:0 0 0 1px var(--mahogany),0 4px 10px rgba(50,25,18,.4)}
+.book.reading.selected .frame{box-shadow:0 0 0 1px var(--mahogany),0 0 0 4px var(--bg),0 0 0 6px var(--mahogany),0 4px 10px rgba(50,25,18,.4)}
 
 /* Carte d'un livre : couverture / titre / auteur / badges.
    Repli : gabarit fixe (titre 2 lignes max, auteur 1 ligne, puis « … »). */
@@ -155,6 +164,8 @@ dialog::backdrop{background:rgba(51,40,36,.7)}
 .meta{margin:0;color:var(--muted);font-size:.9rem}
 .desc{margin:0;color:var(--muted);font:.95rem/1.6 var(--font-text);white-space:pre-line}
 .link{--zoom:1.05;margin-top:8px;padding:0;border:0;background:none;color:var(--accent);font-size:.9rem;text-decoration:underline;transform-origin:left center}
+.genre-row{display:flex;align-items:center;gap:10px}
+.genre-row select{flex:1;min-width:0;padding:6px 10px;border:1px solid var(--ink);border-radius:0;background:var(--beige);color:var(--ink);font:inherit;font-size:.9rem}
 fieldset{margin:0;padding:0;border:0}
 legend{margin-bottom:8px;padding:0;font-weight:600}
 .choices{display:grid;grid-template-columns:1fr 1fr;gap:8px}

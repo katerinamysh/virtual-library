@@ -17,6 +17,8 @@ Application web de bibliothèque virtuelle : on cherche un livre, on l'ajoute, p
 - **Fiche d'un livre** : couverture, titre, auteur, année et descriptif à la demande.
 - **Suivi de lecture** en deux temps : non lu, en cours ou lu, puis possédé ou non possédé.
 - **Filtres** : tous, en cours, lus, non lus, possédés, non possédés. Un second clic sur le filtre actif revient à « Tous ».
+- **Genres** : chaque livre peut recevoir un genre (proposé d'après les catégories de Google Books, modifiable dans la fiche). Une liste déroulante filtre la bibliothèque par genre, avec le nombre de livres.
+- **Livres en cours** : toujours affichés en premier, dans un cadre en bois sombre, jusqu'à ce qu'ils soient lus.
 - **Plusieurs bibliothèques** : création, renommage et suppression, avec un menu accessible au clavier (flèches, Échap).
 - **Interface en français et en anglais** (boutons FR / EN, langue du navigateur détectée à la première visite). La recherche, elle, n'est limitée à aucune langue : on peut ajouter des livres dans n'importe quelle langue, quelle que soit celle de l'interface.
 - **Export et import** : depuis le menu du logo, on télécharge toutes ses bibliothèques dans un fichier `.json` (avec la date de la dernière sauvegarde), puis on l'importe sur un autre appareil en choisissant de fusionner ou de remplacer. Le fichier importé est vérifié et nettoyé (champs connus, tailles limitées, couvertures en `https` uniquement).

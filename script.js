@@ -4,6 +4,25 @@ const STORE = "ma-bibliotheque-v2";
 const OLD_KEY = "ma-bibliotheque";
 const t = I18N.t;   /* traduction : voir i18n.js */
 
+/* Genres proposés (clés ; les libellés sont dans i18n.js : g_<clé>). Un livre peut n'en avoir aucun. */
+const GENRES = ["fiction", "classics", "mystery", "scifi", "fantasy", "horror", "poetry", "theatre", "biography", "history",
+  "essay", "science", "youth", "comics", "art", "lifestyle", "selfhelp", "religion", "travel", "tech"];
+/* Google Books donne des catégories en anglais (« Fiction / Classics »…) : on les rattache au genre le plus proche */
+const GENRE_RULES = [
+  ["comics", /comics|graphic novel|manga/], ["youth", /juvenile|young adult|children/], ["poetry", /poetry|poems/],
+  ["theatre", /drama|theat|plays/], ["scifi", /science fiction/], ["fantasy", /fantasy/], ["horror", /horror|ghost|gothic/],
+  ["mystery", /mystery|detective|thriller|crime|suspense/], ["classics", /classic/], ["biography", /biograph|memoir/],
+  ["history", /history/], ["essay", /philosoph|essay|literary criticism|literary collections/],
+  ["science", /science|mathematic|nature|medical/], ["art", /\bart\b|photograph|music|design|architecture/],
+  ["lifestyle", /cooking|craft|hobb|garden/], ["selfhelp", /self-help|psycholog|body, mind/], ["religion", /religio|spiritual/],
+  ["travel", /travel/], ["tech", /comput|technolog|engineering/], ["fiction", /fiction|novel|literary|stories/]
+];
+function genreFromCategories(cats) {
+  const text = (cats || []).join(" / ").toLowerCase();
+  const rule = GENRE_RULES.find(r => r[1].test(text));
+  return rule ? rule[0] : "";
+}
+
 /* ---------- Données : plusieurs bibliothèques, stockées dans le navigateur ---------- */
 const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
 let state = { libs: [], currentId: null };
@@ -305,7 +324,7 @@ const ROWS = 4;
 const BATCH = 30;         /* assez pour une page de 4 lignes de 6 livres (25 nécessaires) ; moins lourd que le maximum de 40 */
 const BATCH_SMALL = 20;   /* requête allégée, utilisée dès la 3e tentative après des erreurs */
 /* On ne demande que les champs utilisés : la réponse est bien plus légère (donc plus rapide à recevoir) */
-const FIELDS = "items(id,volumeInfo(title,authors,publishedDate,imageLinks,industryIdentifiers,description))";
+const FIELDS = "items(id,volumeInfo(title,authors,publishedDate,imageLinks,industryIdentifiers,description,categories))";
 /* recherche en cours : { q, lang, phase, buffer, start, exhausted, seen }.
    phase 1 : livres dans la langue de l'interface d'abord (langRestrict) ; phase 2 : tous les autres, dans toutes les langues.
    La phase 2 n'est demandée que si la phase 1 ne suffit pas à remplir la page : une recherche courante = une seule requête. */
@@ -418,6 +437,7 @@ $("libName").addEventListener("click", () => {
   $("resultsSection").hidden = true;
   setStatus("");
   filter = "all";
+  genreFilter = "";
   document.querySelectorAll("#tabs .tab").forEach(x => x.setAttribute("aria-pressed", x.dataset.f === "all"));
   renderLibrary();
   $("tabs").scrollIntoView({ behavior: "smooth", block: "start" });
@@ -435,6 +455,7 @@ function toBook(item) {
     year: (v.publishedDate || "").slice(0, 4),
     cover: img.replace("http://", "https://"),
     isbn,
+    genre: genreFromCategories(v.categories),
     description: v.description ? v.description.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim() : ""
   };
 }
@@ -490,7 +511,7 @@ function badge(text, on) {
 
 function card(book, withBadges) {
   const b = document.createElement("div");   /* la carte n'est plus cliquable : seule la couverture l'est */
-  b.className = "book" + (book.id === selectedId ? " selected" : "");
+  b.className = "book" + (book.id === selectedId ? " selected" : "") + (withBadges && book.status === "reading" ? " reading" : "");
   b.dataset.id = book.id;
   const frame = document.createElement("button");   /* cadre + couverture = zone cliquable */
   frame.type = "button";
@@ -526,10 +547,34 @@ function appendResults(more) {   /* « Afficher plus » : on ajoute sans recharg
 }
 $("closeResults").addEventListener("click", () => { $("resultsSection").hidden = true; });
 
+/* Filtre par genre : la liste ne montre que les genres présents dans la bibliothèque (avec leur nombre de livres) */
+let genreFilter = "";   /* "" = tous, une clé de GENRES, ou "none" = sans genre */
+function renderGenreFilter() {
+  const sel = $("genreFilter");
+  const counts = {};
+  let none = 0;
+  books().forEach(b => { if (b.genre) counts[b.genre] = (counts[b.genre] || 0) + 1; else none++; });
+  const present = GENRES.filter(g => counts[g]);
+  if (genreFilter && genreFilter !== "none" && !counts[genreFilter]) genreFilter = "";
+  if (genreFilter === "none" && !none) genreFilter = "";
+  sel.hidden = !present.length;   /* inutile tant qu'aucun livre n'a de genre */
+  const opt = (value, label) => { const o = document.createElement("option"); o.value = value; o.textContent = label; return o; };
+  sel.replaceChildren(
+    opt("", t("genreAll")),
+    ...present.map(g => opt(g, t("g_" + g) + " (" + counts[g] + ")")),
+    ...(none ? [opt("none", t("genreNone") + " (" + none + ")")] : [])
+  );
+  sel.value = genreFilter;
+  sel.classList.toggle("active", !!genreFilter);
+}
+$("genreFilter").addEventListener("change", () => { genreFilter = $("genreFilter").value; renderLibrary(); updateLibStatus(); });
+
 function renderLibrary() {
+  renderGenreFilter();
   const words = normText(libQuery).split(/\s+/).filter(Boolean);
   const list = books().filter(b =>
-    (!words.length || matchesAll(b, words)) && (
+    (!words.length || matchesAll(b, words)) &&
+    (!genreFilter || (genreFilter === "none" ? !b.genre : b.genre === genreFilter)) && (
     filter === "all" ? true :
     filter === "read" ? b.status === "read" :
     filter === "reading" ? b.status === "reading" :
@@ -545,7 +590,9 @@ function renderLibrary() {
     box.replaceChildren(p);
     return;
   }
-  box.replaceChildren(...list.map(b => card(b, true)));
+  /* Les livres « en cours » passent toujours en premier, jusqu'à ce qu'ils soient lus ; le reste garde son ordre */
+  const ordered = [...list.filter(b => b.status === "reading"), ...list.filter(b => b.status !== "reading")];
+  box.replaceChildren(...ordered.map(b => card(b, true)));
 }
 
 /* ---------- Recherche dans la bibliothèque (sans accents ni majuscules, tous les mots doivent correspondre) ---------- */
@@ -583,6 +630,15 @@ $("tabs").addEventListener("click", e => {
 });
 
 /* ---------- Fiche d'un livre ---------- */
+/* Liste des genres de la fiche, dans la langue de l'interface */
+function fillGenreSelect() {
+  const sel = $("genreSel");
+  const opt = (value, label) => { const o = document.createElement("option"); o.value = value; o.textContent = label; return o; };
+  sel.replaceChildren(opt("", t("genreUnset")), ...GENRES.map(g => opt(g, t("g_" + g))));
+  sel.value = draft.genre || "";
+}
+$("genreSel").addEventListener("change", () => { draft.genre = $("genreSel").value; });
+
 function openBook(book) {
   /* Pas encore de bibliothèque : on la crée d'abord, puis on rouvre la fiche */
   if (!currentLib()) { askNewLibrary(() => openBook(book)); return; }
@@ -590,7 +646,8 @@ function openBook(book) {
   selectedId = book.id;   /* cadre walnut autour du livre choisi */
   document.querySelectorAll(".book").forEach(el => el.classList.toggle("selected", el.dataset.id === selectedId));
   const s = saved(book.id);
-  draft = { status: s ? s.status : null, owned: s ? s.owned : null };
+  draft = { status: s ? s.status : null, owned: s ? s.owned : null, genre: (s ? s.genre : book.genre) || "" };
+  fillGenreSelect();
   const f = document.createElement("span");   /* même cadre que sur la page d'accueil (non cliquable ici) */
   f.className = "frame static";
   f.appendChild(coverEl(book));
@@ -674,7 +731,7 @@ $("saveBtn").addEventListener("click", () => {
 
 function commitBook() {
   const lib = currentLib();
-  const entry = { ...current, status: draft.status, owned: draft.owned };
+  const entry = { ...current, status: draft.status, owned: draft.owned, genre: draft.genre };
   delete entry.read;
   const i = lib.books.findIndex(b => b.id === entry.id);
   if (i >= 0) lib.books[i] = entry; else lib.books.unshift(entry);
@@ -731,6 +788,7 @@ function cleanBook(b) {
   return {
     id: str(b.id, 100), title: str(b.title, 300), author: str(b.author, 300), year: str(b.year, 10),
     cover: /^https:\/\//i.test(b.cover) ? str(b.cover, 1000) : "", isbn: str(b.isbn, 20), description: str(b.description, 6000),
+    genre: GENRES.includes(b.genre) ? b.genre : "",
     status: ["unread", "reading", "read"].includes(b.status) ? b.status : (b.read ? "read" : "unread"),
     owned: b.owned === true
   };

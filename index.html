@@ -63,6 +63,7 @@
       <button class="tab" data-f="unread" aria-pressed="false" data-i18n="fUnread">Non lus</button>
       <button class="tab" data-f="owned" aria-pressed="false" data-i18n="fOwned">Possédés</button>
       <button class="tab" data-f="notowned" aria-pressed="false" data-i18n="fNotOwned">Non possédés</button>
+      <select class="tab-select" id="genreFilter" aria-label="Filtrer par genre" data-i18n-aria-label="genreFilterLabel" hidden></select>
     </div>
     <div class="grid" id="library"></div>
   </section>
@@ -96,6 +97,11 @@
         <button class="choice" type="button" data-owned="false" aria-pressed="false" data-i18n="notOwned">Non possédé</button>
       </div>
     </fieldset>
+
+    <div class="genre-row">
+      <label for="genreSel" class="meta" data-i18n="genreLabel">Genre</label>
+      <select id="genreSel"></select>
+    </div>
 
     <div class="actions">
       <button class="btn ghost danger" id="removeBtn" type="button" hidden data-i18n="removeBook">Retirer</button>
