@@ -139,7 +139,8 @@ select option{background:var(--surface);color:var(--ink)}
 
 /* ---------- 5. Livres ---------- */
 .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));column-gap:20px;row-gap:0;padding-bottom:48px}
-.more{display:flex;justify-content:center;margin:-8px 0 48px}
+#results{padding-bottom:0}   /* l'espace avant « Afficher plus » vient de la carte (42px) + de la marge ci-dessous, pour égaler l'espace après */
+.more{display:flex;justify-content:center;margin:6px 0 48px}
 .more .btn{padding:3px 18px}
 .empty{grid-column:1/-1;padding:40px 0;color:var(--muted)}
 
