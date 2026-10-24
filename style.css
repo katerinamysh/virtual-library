@@ -164,8 +164,11 @@ dialog::backdrop{background:rgba(51,40,36,.7)}
 .meta{margin:0;color:var(--muted);font-size:.9rem}
 .desc{margin:0;color:var(--muted);font:.95rem/1.6 var(--font-text);white-space:pre-line}
 .link{--zoom:1.05;margin-top:8px;padding:0;border:0;background:none;color:var(--accent);font-size:.9rem;text-decoration:underline;transform-origin:left center}
-.genre-row{display:flex;align-items:center;gap:10px}
-.genre-row select{flex:1;min-width:0;min-height:40px;padding:6px 4px;border:0;border-bottom:1px solid var(--taupe);border-radius:0;background:transparent;color:var(--ink);font:inherit;font-size:.95rem}
+/* Bloc de choix : statut, possession et genre ont la même largeur (celle de la ligne la plus large) */
+.pick{display:flex;flex-direction:column;gap:14px;width:fit-content;max-width:100%}
+.genre-row{display:flex;flex-direction:column;gap:2px}
+.genre-label{font-weight:600}
+.genre-row select{box-sizing:border-box;width:0;min-width:100%;min-height:40px;padding:6px 4px;border:0;border-bottom:1px solid var(--taupe);border-radius:0;background:transparent;color:var(--ink);font:inherit;font-size:.95rem}
 fieldset{margin:0;padding:0;border:0}
 legend{margin-bottom:8px;padding:0;font-weight:600}
 .choices{display:flex;flex-wrap:wrap;gap:0 18px}
