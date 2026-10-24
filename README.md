@@ -30,6 +30,7 @@ Application web de bibliothèque virtuelle : on cherche un livre, on l'ajoute, p
 
 - **HTML, CSS et JavaScript sans framework ni étape de compilation.** Le site est un ensemble de fichiers statiques.
 - **Mise en page par grille CSS** : jusqu'à 6 livres par ligne, titres, auteurs et pastilles alignés d'une carte à l'autre grâce à `subgrid`, avec un gabarit de repli et des points de suspension pour les textes longs.
+- **Listes déroulantes sur mesure** (genres) : fond, ligne survolée et barre de défilement aux couleurs du site, avec navigation au clavier (flèches, Début/Fin, Entrée, Échap, saisie des premières lettres). Le `<select>` natif reste en coulisses comme source de vérité.
 - **Accessibilité** : navigation au clavier, rôles ARIA du menu, états `aria-pressed`, respect de `prefers-reduced-motion`.
 - **Polices hébergées dans le site** (Playfair Display, Lora et Jost, sous licence SIL Open Font) : aucune requête vers un service de polices tiers.
 - **Données de démonstration** : à la première visite, une bibliothèque d'exemple s'affiche (`demo.js`) : classiques français en français, classiques anglais en anglais. Leurs couvertures sont chargées par ISBN depuis Open Library.

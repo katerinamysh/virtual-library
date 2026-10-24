@@ -115,6 +115,21 @@ input[type="search"]::-webkit-search-cancel-button{
 .tab{padding:2.5px 7px;border:2px solid var(--ink);border-radius:0;background:var(--beige);color:var(--ink);font-size:.9rem;letter-spacing:.04em}
 .tab[aria-pressed="true"]{background:var(--mahogany);border-color:var(--mahogany);color:var(--beige)}
 
+/* Listes déroulantes sur mesure (genres) : voir enhanceSelect dans script.js */
+.dd{position:relative;display:inline-block;max-width:100%}
+.dd-native{display:none}
+.dd-btn{display:flex;align-items:center;justify-content:space-between;gap:10px;width:100%;text-align:left;font:inherit;color:var(--ink)}
+.dd-btn svg{flex:none;width:11px;height:11px;fill:none;stroke:currentColor;stroke-width:1.8}
+.dd-text{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.dd-chip .dd-btn{padding:2.5px 8px 2.5px 7px;border:2px solid var(--ink);border-radius:0;background:var(--beige);font-size:.9rem;letter-spacing:.04em}
+.dd-chip .dd-btn.active{background:var(--mahogany);border-color:var(--mahogany);color:var(--beige)}
+.dd-line{display:block;width:0;min-width:100%}   /* largeur imposée par le bloc parent, jamais par le texte */
+.dd-line .dd-btn{--zoom:1;min-height:40px;padding:6px 4px;border:0;border-bottom:1px solid var(--taupe);border-radius:0;background:transparent;font-size:.95rem}
+.dd-list{position:fixed;z-index:60;margin:0;padding:4px;list-style:none;overflow:auto;background:var(--surface);color:var(--ink);border:2px solid var(--ink);box-shadow:0 6px 18px rgba(50,25,18,.25);outline:0}
+.dd-list li{padding:8px 12px;font:400 .92rem/1.3 var(--font-ui);letter-spacing:.02em;white-space:nowrap;cursor:pointer}
+.dd-list li.act{background:var(--soft)}
+.dd-list li[aria-selected="true"]{font-weight:600}
+
 /* Fond de la liste ouverte des genres : celui du site et des fenêtres (selon le navigateur ; la ligne survolée garde la couleur du système) */
 select option{background:var(--surface);color:var(--ink)}
 

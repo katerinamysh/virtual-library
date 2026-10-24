@@ -614,6 +614,7 @@ function renderGenreFilter() {
   );
   sel.value = genreFilter;
   sel.classList.toggle("active", !!genreFilter);
+  if (sel._dd) sel._dd.render();
 }
 $("genreFilter").addEventListener("change", () => { genreFilter = $("genreFilter").value; renderLibrary(); updateLibStatus(); });
 
@@ -684,6 +685,7 @@ function fillGenreSelect() {
   const opt = (value, label) => { const o = document.createElement("option"); o.value = value; o.textContent = label; return o; };
   sel.replaceChildren(opt("", t("genreUnset")), ...GENRES.map(g => opt(g, t("g_" + g))));
   sel.value = draft.genre || "";
+  if (sel._dd) sel._dd.render();
 }
 $("genreSel").addEventListener("change", () => { draft.genre = $("genreSel").value; draft.genreSet = true; });   /* choix manuel : plus jamais modifié automatiquement */
 
@@ -800,6 +802,116 @@ $("removeBtn").addEventListener("click", () => {
 });
 
 $("dlg").addEventListener("click", e => { if (e.target === $("dlg")) $("dlg").close(); });
+
+/* ---------- Listes déroulantes sur mesure (genres) ----------
+   Une liste native ne permet pas de choisir son fond, sa ligne survolée ni sa barre de défilement. On garde donc le <select>
+   (caché) comme source de vérité et on affiche à sa place un bouton + une liste aux couleurs du site, utilisables au clavier
+   (flèches, Début/Fin, Entrée, Échap, première lettre). */
+function enhanceSelect(sel) {
+  const wrap = document.createElement("div");
+  wrap.className = "dd dd-" + (sel.dataset.dd || "line");
+  const btn = document.createElement("button");
+  btn.type = "button"; btn.className = "dd-btn"; btn.id = sel.id + "Btn";
+  btn.setAttribute("aria-haspopup", "listbox"); btn.setAttribute("aria-expanded", "false");
+  const text = document.createElement("span"); text.className = "dd-text";
+  btn.append(text);
+  btn.insertAdjacentHTML("beforeend", '<svg viewBox="0 0 12 12" aria-hidden="true"><path d="M2 4.2l4 4 4-4" stroke-linecap="round" stroke-linejoin="round"/></svg>');
+  const list = document.createElement("ul");
+  list.className = "dd-list"; list.setAttribute("role", "listbox"); list.tabIndex = -1; list.hidden = true;
+  wrap.append(btn, list);
+  sel.after(wrap);
+  sel.classList.add("dd-native"); sel.tabIndex = -1; sel.setAttribute("aria-hidden", "true");
+  const lab = document.querySelector('label[for="' + sel.id + '"]');
+  if (lab) lab.htmlFor = btn.id;   /* le libellé « Genre » mène au bouton */
+
+  let opts = [], active = -1, typed = "", typedAt = 0;
+  const isOpen = () => !list.hidden;
+
+  function render() {
+    opts = [...sel.options];
+    list.replaceChildren(...opts.map((o, i) => {
+      const li = document.createElement("li");
+      li.id = sel.id + "Opt" + i; li.setAttribute("role", "option"); li.dataset.i = i;
+      li.setAttribute("aria-selected", o.value === sel.value);
+      li.textContent = o.textContent;
+      return li;
+    }));
+    const cur = opts.find(o => o.value === sel.value) || opts[0];
+    text.textContent = cur ? cur.textContent : "";
+    wrap.hidden = sel.hidden;
+    btn.classList.toggle("active", sel.classList.contains("active"));
+    const al = sel.getAttribute("aria-label");
+    if (al) btn.setAttribute("aria-label", al);
+  }
+  function highlight(i) {
+    active = Math.max(0, Math.min(opts.length - 1, i));
+    [...list.children].forEach((li, k) => li.classList.toggle("act", k === active));
+    const li = list.children[active];
+    if (li) { list.setAttribute("aria-activedescendant", li.id); li.scrollIntoView({ block: "nearest" }); }
+  }
+  function place() {   /* sous le bouton, ou au-dessus s'il manque de la place */
+    const r = btn.getBoundingClientRect(), vh = window.innerHeight;
+    list.style.minWidth = r.width + "px";
+    list.style.maxHeight = "";
+    const h = Math.min(list.scrollHeight, 300);
+    const below = vh - r.bottom - 10, above = r.top - 10;
+    const up = h > below && above > below;
+    list.style.maxHeight = Math.max(120, Math.min(300, up ? above : below)) + "px";
+    list.style.left = Math.max(8, Math.min(r.left, window.innerWidth - list.offsetWidth - 8)) + "px";
+    list.style.top = up ? Math.max(8, r.top - list.offsetHeight - 2) + "px" : (r.bottom + 2) + "px";
+  }
+  function open() {
+    if (isOpen() || !opts.length) return;
+    list.hidden = false;
+    btn.setAttribute("aria-expanded", "true");
+    place();
+    highlight(Math.max(0, opts.findIndex(o => o.value === sel.value)));
+    list.focus();
+  }
+  function close(refocus) {
+    if (!isOpen()) return;
+    list.hidden = true;
+    btn.setAttribute("aria-expanded", "false");
+    if (refocus) btn.focus();
+  }
+  function choose(i) {
+    const o = opts[i];
+    if (o && sel.value !== o.value) { sel.value = o.value; sel.dispatchEvent(new Event("change", { bubbles: true })); }
+    render();
+    close(true);
+  }
+
+  btn.addEventListener("click", () => (isOpen() ? close(true) : open()));
+  btn.addEventListener("keydown", e => {
+    if (["ArrowDown", "ArrowUp", "Enter", " "].includes(e.key)) { e.preventDefault(); open(); }
+  });
+  list.addEventListener("click", e => { const li = e.target.closest("li"); if (li) choose(+li.dataset.i); });
+  list.addEventListener("keydown", e => {
+    const k = e.key;
+    if (k === "ArrowDown") { e.preventDefault(); highlight(active + 1); }
+    else if (k === "ArrowUp") { e.preventDefault(); highlight(active - 1); }
+    else if (k === "Home") { e.preventDefault(); highlight(0); }
+    else if (k === "End") { e.preventDefault(); highlight(opts.length - 1); }
+    else if (k === "Enter" || k === " ") { e.preventDefault(); choose(active); }
+    else if (k === "Escape") { e.preventDefault(); e.stopPropagation(); close(true); }   /* ferme la liste sans fermer la fenêtre */
+    else if (k === "Tab") close(false);
+    else if (k.length === 1 && !e.ctrlKey && !e.metaKey) {   /* saisie des premières lettres */
+      const now = Date.now();
+      typed = (now - typedAt > 700 ? "" : typed) + normText(k); typedAt = now;
+      const i = opts.findIndex((o, n) => n >= 0 && normText(o.textContent).startsWith(typed));
+      if (i >= 0) highlight(i);
+    }
+  });
+  list.addEventListener("mousemove", e => { const li = e.target.closest("li"); if (li && +li.dataset.i !== active) highlight(+li.dataset.i); });
+  document.addEventListener("click", e => { if (isOpen() && !wrap.contains(e.target)) close(false); });
+  window.addEventListener("resize", () => close(false));
+  window.addEventListener("scroll", e => { if (isOpen() && !list.contains(e.target)) close(false); }, true);
+
+  sel._dd = { render };
+  render();
+}
+enhanceSelect($("genreFilter"));
+enhanceSelect($("genreSel"));
 
 /* ---------- Export / import d'un fichier de sauvegarde (.json) ---------- */
 const EXPORT_APP = "ma-bibliotheque";
