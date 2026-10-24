@@ -25,6 +25,7 @@
   --ink:#000; --muted:#000;                        /* texte */
   --accent:var(--mahogany); --accent-ink:var(--beige);
   --soft:rgba(195,174,154,.55);                    /* fond d'une couverture vide, bibliothèque active du menu */
+  --track:#DDD0C1;                                 /* fond des barres de défilement */
   --warn:#8a2a14;                                  /* erreurs et suppression */
 
   /* Les 3 polices du site, avec des polices de secours proches disponibles partout */
@@ -35,6 +36,15 @@
 
 /* ---------- 2. Base ---------- */
 *{box-sizing:border-box}
+
+/* Barres de défilement : curseur acajou sur fond beige clair, angles droits comme les boutons */
+:root{scrollbar-color:var(--mahogany) var(--track)}
+@supports not (scrollbar-color:auto){   /* anciens navigateurs WebKit */
+  ::-webkit-scrollbar{width:12px;height:12px;background:var(--track)}
+  ::-webkit-scrollbar-track{background:var(--track)}
+  ::-webkit-scrollbar-thumb{background:var(--mahogany);border:2px solid var(--track);border-radius:0}
+  ::-webkit-scrollbar-thumb:hover{background:var(--walnut)}
+}
 body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.5 var(--font-ui)}
 h2{font:600 1.25rem var(--font-display);margin:0}
 button{font:inherit;font-family:var(--font-ui);cursor:pointer;transition:transform .2s ease}
