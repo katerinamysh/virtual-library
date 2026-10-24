@@ -17,7 +17,7 @@ Application web de bibliothèque virtuelle : on cherche un livre, on l'ajoute, p
 - **Fiche d'un livre** : couverture, titre, auteur, année et descriptif à la demande.
 - **Suivi de lecture** en deux temps : non lu, en cours ou lu, puis possédé ou non possédé.
 - **Filtres** : tous, en cours, lus, non lus, possédés, non possédés. Un second clic sur le filtre actif revient à « Tous ».
-- **Genres** : chaque livre peut recevoir un genre (proposé d'après les catégories de Google Books, modifiable dans la fiche). Une liste déroulante filtre la bibliothèque par genre, avec le nombre de livres.
+- **Genres** : le genre est attribué automatiquement (catégories de Google Books, puis genre des livres du même auteur, puis mots-clés du titre et du descriptif) et reste modifiable dans la fiche ; un choix manuel n'est jamais écrasé. Une liste déroulante filtre la bibliothèque par genre, avec le nombre de livres.
 - **Livres en cours** : toujours affichés en premier, dans un cadre en bois sombre, jusqu'à ce qu'ils soient lus.
 - **Plusieurs bibliothèques** : création, renommage et suppression, avec un menu accessible au clavier (flèches, Échap).
 - **Interface en français et en anglais** (boutons FR / EN, langue du navigateur détectée à la première visite). La recherche, elle, n'est limitée à aucune langue : on peut ajouter des livres dans n'importe quelle langue, quelle que soit celle de l'interface.

@@ -7,20 +7,68 @@ const t = I18N.t;   /* traduction : voir i18n.js */
 /* Genres proposés (clés ; les libellés sont dans i18n.js : g_<clé>). Un livre peut n'en avoir aucun. */
 const GENRES = ["fiction", "classics", "mystery", "scifi", "fantasy", "horror", "poetry", "theatre", "biography", "history",
   "essay", "science", "youth", "comics", "art", "lifestyle", "selfhelp", "religion", "travel", "tech"];
-/* Google Books donne des catégories en anglais (« Fiction / Classics »…) : on les rattache au genre le plus proche */
-const GENRE_RULES = [
-  ["comics", /comics|graphic novel|manga/], ["youth", /juvenile|young adult|children/], ["poetry", /poetry|poems/],
-  ["theatre", /drama|theat|plays/], ["scifi", /science fiction/], ["fantasy", /fantasy/], ["horror", /horror|ghost|gothic/],
-  ["mystery", /mystery|detective|thriller|crime|suspense/], ["classics", /classic/], ["biography", /biograph|memoir/],
-  ["history", /history/], ["essay", /philosoph|essay|literary criticism|literary collections/],
-  ["science", /science|mathematic|nature|medical/], ["art", /\bart\b|photograph|music|design|architecture/],
-  ["lifestyle", /cooking|craft|hobb|garden/], ["selfhelp", /self-help|psycholog|body, mind/], ["religion", /religio|spiritual/],
-  ["travel", /travel/], ["tech", /comput|technolog|engineering/], ["fiction", /fiction|novel|literary|stories/]
+/* Classement automatique, du plus fiable au moins fiable :
+   1. les catégories de Google Books (en anglais, parfois en français), rattachées au genre le plus proche ;
+   2. le genre que vous avez déjà donné à un livre du même auteur ;
+   3. des mots-clés du titre et du descriptif (« roman policier », « dragon », « poèmes »…).
+   Google ne renseigne pas toujours ses catégories : un livre peut donc rester sans genre. Un genre choisi à la main n'est jamais modifié. */
+const CATEGORY_RULES = [
+  ["comics", /comics|graphic novel|manga|bande dessinee/], ["youth", /juvenile|young adult|children|jeunesse|enfant/],
+  ["poetry", /poetry|poems|poesie/], ["theatre", /drama|theat|plays|piece de theatre/], ["scifi", /science[- ]fiction/],
+  ["fantasy", /fantasy/], ["horror", /horror|ghost|gothic|horreur|fantastique/],
+  ["mystery", /mystery|detective|thriller|crime|suspense|policier|polar/], ["classics", /classic|classique/],
+  ["biography", /biograph|memoir/], ["history", /history|histoire/],
+  ["essay", /philosoph|essay|literary criticism|literary collections|essai/], ["science", /science|mathemat|nature|medical|medecine/],
+  ["art", /\bart\b|photograph|music|musique|design|architecture/], ["lifestyle", /cooking|cuisine|craft|hobb|garden|jardin/],
+  ["selfhelp", /self-help|psycholog|body, mind|developpement personnel/], ["religion", /religio|spiritual/],
+  ["travel", /travel|voyage/], ["tech", /comput|informatique|technolog|engineering/], ["fiction", /fiction|novel|literary|stories|roman|litterature/]
+];
+const KEYWORD_RULES = [
+  ["comics", /\b(bande dessinee|comic book|graphic novel|manga|webtoon)\b/],
+  ["youth", /\b(pour la jeunesse|livre jeunesse|children'?s (book|story)|picture book|young adult)\b/],
+  ["poetry", /\b(poemes?|recueil de poe|poetry|poems|sonnets?)\b/],
+  ["theatre", /\b(piece de theatre|comedie en \w+ actes?|tragedie en \w+ actes?|play in \w+ acts?|stage play)\b/],
+  ["scifi", /\b(science[- ]fiction|space opera|dystopi\w*|extraterrestres?|aliens?|spaceships?|vaisseaux? spatial\w*|cyberpunk)\b/],
+  ["fantasy", /\b(fantasy|dragons?|sorciers?|sorcieres?|wizards?|elfes?|elves|dwarves)\b/],
+  ["horror", /\b(horror|horreur|vampires?|zombies?|haunted|hantee?|fantomes?|ghosts?|epouvante)\b/],
+  ["mystery", /\b(roman policier|polar|detective|thriller|whodunit|serial killer|tueur en serie|mystery novel|private investigator)\b/],
+  ["biography", /\b(biograph\w*|autobiograph\w*|memoirs?|memoires de)\b/],
+  ["selfhelp", /\b(developpement personnel|self-help|mindfulness|confiance en soi)\b/],
+  ["lifestyle", /\b(recettes?|cookbook|recipes?|jardinage|gardening|bricolage)\b/],
+  ["tech", /\b(programmation|programming|javascript|python|informatique|software|algorithms?|machine learning|intelligence artificielle)\b/],
+  ["religion", /\b(bible|coran|bouddhis\w*|spirituali\w*|theolog\w*)\b/],
+  ["travel", /\b(guide de voyage|carnet de voyage|travel guide|travelogue)\b/],
+  ["science", /\b(vulgarisation|physique quantique|relativite|neurosciences?|astronomie|mathematiques?)\b/],
+  ["history", /\b(history of|histoire de (la|l'|france|rome)|world war|guerre mondiale|empire romain|revolution francaise)\b/],
+  ["fiction", /\b(roman|novel|nouvelles?|short stories)\b/]
 ];
 function genreFromCategories(cats) {
-  const text = (cats || []).join(" / ").toLowerCase();
-  const rule = GENRE_RULES.find(r => r[1].test(text));
+  const text = normText((cats || []).join(" / "));
+  const rule = CATEGORY_RULES.find(r => r[1].test(text));
   return rule ? rule[0] : "";
+}
+const firstAuthor = b => normText((b.author || "").split(",")[0]);
+function guessGenre(book) {
+  const au = firstAuthor(book);
+  if (au) {   /* même auteur : le genre le plus fréquent parmi vos livres déjà classés */
+    const counts = {};
+    state.libs.forEach(l => l.books.forEach(b => { if (b.genre && b.id !== book.id && firstAuthor(b) === au) counts[b.genre] = (counts[b.genre] || 0) + 1; }));
+    const best = Object.keys(counts).sort((a, b) => counts[b] - counts[a])[0];
+    if (best) return best;
+  }
+  const text = normText((book.title || "") + " " + (book.description || ""));
+  const rule = KEYWORD_RULES.find(r => r[1].test(text));
+  return rule ? rule[0] : "";
+}
+/* Classe les livres enregistrés qui n'ont pas encore de genre (sauf ceux que vous avez laissés « Non précisé » à la main) */
+function autoClassifyAll() {
+  let changed = false;
+  state.libs.forEach(l => l.books.forEach(b => {
+    if (b.genre || b.genreSet) return;
+    const g = guessGenre(b);
+    if (g) { b.genre = g; changed = true; }
+  }));
+  return changed;
 }
 
 /* ---------- Données : plusieurs bibliothèques, stockées dans le navigateur ---------- */
@@ -637,7 +685,7 @@ function fillGenreSelect() {
   sel.replaceChildren(opt("", t("genreUnset")), ...GENRES.map(g => opt(g, t("g_" + g))));
   sel.value = draft.genre || "";
 }
-$("genreSel").addEventListener("change", () => { draft.genre = $("genreSel").value; });
+$("genreSel").addEventListener("change", () => { draft.genre = $("genreSel").value; draft.genreSet = true; });   /* choix manuel : plus jamais modifié automatiquement */
 
 function openBook(book) {
   /* Pas encore de bibliothèque : on la crée d'abord, puis on rouvre la fiche */
@@ -646,7 +694,7 @@ function openBook(book) {
   selectedId = book.id;   /* cadre walnut autour du livre choisi */
   document.querySelectorAll(".book").forEach(el => el.classList.toggle("selected", el.dataset.id === selectedId));
   const s = saved(book.id);
-  draft = { status: s ? s.status : null, owned: s ? s.owned : null, genre: (s ? s.genre : book.genre) || "" };
+  draft = { status: s ? s.status : null, owned: s ? s.owned : null, genre: (s ? s.genre : book.genre) || (s && s.genreSet ? "" : guessGenre(book)), genreSet: !!(s && s.genreSet) };
   fillGenreSelect();
   const f = document.createElement("span");   /* même cadre que sur la page d'accueil (non cliquable ici) */
   f.className = "frame static";
@@ -731,10 +779,12 @@ $("saveBtn").addEventListener("click", () => {
 
 function commitBook() {
   const lib = currentLib();
-  const entry = { ...current, status: draft.status, owned: draft.owned, genre: draft.genre };
+  const entry = { ...current, status: draft.status, owned: draft.owned, genre: draft.genre || (draft.genreSet ? "" : guessGenre(current)) };
+  if (draft.genreSet) entry.genreSet = true;
   delete entry.read;
   const i = lib.books.findIndex(b => b.id === entry.id);
   if (i >= 0) lib.books[i] = entry; else lib.books.unshift(entry);
+  autoClassifyAll();   /* un nouveau genre peut en déduire d'autres (même auteur) */
   persist();
   renderLibrary();
   $("resultsSection").hidden = true;
@@ -788,7 +838,7 @@ function cleanBook(b) {
   return {
     id: str(b.id, 100), title: str(b.title, 300), author: str(b.author, 300), year: str(b.year, 10),
     cover: /^https:\/\//i.test(b.cover) ? str(b.cover, 1000) : "", isbn: str(b.isbn, 20), description: str(b.description, 6000),
-    genre: GENRES.includes(b.genre) ? b.genre : "",
+    genre: GENRES.includes(b.genre) ? b.genre : "", genreSet: b.genreSet === true,
     status: ["unread", "reading", "read"].includes(b.status) ? b.status : (b.read ? "read" : "unread"),
     owned: b.owned === true
   };
@@ -826,6 +876,7 @@ $("importFile").addEventListener("change", async () => {
 });
 
 function finishImport(msgKey, params) {
+  autoClassifyAll();
   persist();
   resetLibSearch();
   $("resultsSection").hidden = true;
@@ -894,4 +945,5 @@ I18N.onChange(() => {
 });
 
 I18N.applyStatic();
+if (autoClassifyAll()) persist();   /* classe les livres déjà enregistrés qui n'ont pas de genre */
 renderAll();
