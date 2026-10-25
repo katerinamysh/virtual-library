@@ -73,6 +73,10 @@ fonts/          polices hébergées et leurs licences
 docs/           captures d'écran du README et image d'aperçu des liens
 ```
 
+## Autrice
+
+Katerina Myshkin · [LinkedIn](https://www.linkedin.com/in/katerina-myshkin) · [GitHub](https://github.com/katerinamysh)
+
 ## Licence
 
 Code publié sous licence [MIT](LICENSE). Les polices du dossier `fonts/` sont sous licence SIL Open Font (voir les fichiers `LICENSE-*.txt`). L'image `separateur.webp` a été créée sur Canva et n'est pas couverte par la licence MIT.

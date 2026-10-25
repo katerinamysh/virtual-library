@@ -73,6 +73,10 @@ fonts/          self-hosted fonts and their licences
 docs/           README screenshots and link preview image
 ```
 
+## Author
+
+Katerina Myshkin · [LinkedIn](https://www.linkedin.com/in/katerina-myshkin) · [GitHub](https://github.com/katerinamysh)
+
 ## Licence
 
 Code released under the [MIT](LICENSE) licence. The fonts in the `fonts/` folder are under the SIL Open Font License (see the `LICENSE-*.txt` files). The `separateur.webp` image was created with Canva and is not covered by the MIT licence.
