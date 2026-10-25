@@ -1,80 +1,83 @@
-# Ma bibliothèque
+# My Library
 
-Application web de bibliothèque virtuelle : on cherche un livre, on l'ajoute, puis on suit son état de lecture (non lu, en cours, lu) et s'il est possédé ou non. Plusieurs bibliothèques peuvent coexister.
+*[Version française](README.fr.md)*
 
-**Démo** : <https://katerinamysh.github.io/virtual-library/>
+A virtual library web app: search for a book, add it, then track its reading status (unread, reading, read) and whether you own it. Several libraries can coexist.
 
-![Page d'accueil](docs/apercu-accueil.png)
+**Live demo**: <https://katerinamysh.github.io/virtual-library/>
 
-## Fonctionnalités
+![Home page](docs/apercu-accueil.png)
 
-- **Recherche** par titre, auteur ou ISBN avec l'API [Google Books](https://developers.google.com/books), avec jusqu'à 5 tentatives automatiques (et une requête allégée) si le service est momentanément indisponible.
-- **Résultats par lignes complètes** : 4 lignes à la fois, quel que soit le nombre de colonnes de l'écran, puis un bouton « Afficher plus de résultats ». Seule la dernière page, quand il n'y a plus rien à charger, peut avoir une ligne incomplète.
-- **Langue des résultats** : les livres dans la langue de l'interface sont proposés en premier (par exemple les éditions françaises d'un titre avec l'interface en français), suivis de tous les autres : aucune langue n'est exclue.
-- **Couvertures** : Open Library par ISBN en priorité, puis Google Books, puis le titre sur fond neutre.
-- **Recherche dans sa bibliothèque** : un second bouton, « Ma bibliothèque », filtre les livres déjà ajoutés par titre, auteur, année ou ISBN (sans tenir compte des accents ni des majuscules), en combinaison avec les filtres de lecture.
-- **Détection des doublons** : avant d'ajouter un livre, une fenêtre montre la fiche d'un livre similaire déjà présent (même ISBN, ou même titre et auteur commun, même pour une autre édition) et demande confirmation.
-- **Fiche d'un livre** : couverture, titre, auteur, année et descriptif à la demande.
-- **Suivi de lecture** en deux temps : non lu, en cours ou lu, puis possédé ou non possédé.
-- **Filtres** : tous, en cours, lus, non lus, possédés, non possédés. Un second clic sur le filtre actif revient à « Tous ».
-- **Genres** : le genre est attribué automatiquement (catégories de Google Books, puis genre des livres du même auteur, puis mots-clés du titre et du descriptif) et reste modifiable dans la fiche ; un choix manuel n'est jamais écrasé. Une liste déroulante filtre la bibliothèque par genre, avec le nombre de livres.
-- **Livres en cours** : toujours affichés en premier, dans un cadre en bois sombre, jusqu'à ce qu'ils soient lus.
-- **Plusieurs bibliothèques** : création, renommage et suppression, avec un menu accessible au clavier (flèches, Échap).
-- **Interface en français et en anglais** (boutons FR / EN, langue du navigateur détectée à la première visite). La recherche, elle, n'est limitée à aucune langue : on peut ajouter des livres dans n'importe quelle langue, quelle que soit celle de l'interface.
-- **Export et import** : depuis le menu du logo, on télécharge toutes ses bibliothèques dans un fichier `.json` (avec la date de la dernière sauvegarde), puis on l'importe sur un autre appareil en choisissant de fusionner ou de remplacer. Le fichier importé est vérifié et nettoyé (champs connus, tailles limitées, couvertures en `https` uniquement).
-- **Sauvegarde locale** dans le navigateur (`localStorage`) : aucune donnée n'est envoyée à un serveur.
+## Features
 
-![Fiche d'un livre](docs/apercu-fiche.png)
+- **Search** by title, author or ISBN with the [Google Books](https://developers.google.com/books) API, with up to 5 automatic retries (and a lighter request) when the service is temporarily unavailable.
+- **Results in full rows**: 4 rows at a time, whatever the number of columns on screen, then a "Show more results" button. Only the last page, when there is nothing left to load, may end with an incomplete row.
+- **Result language**: books in the interface language come first (for example French editions of a title when the interface is in French), followed by all the others: no language is excluded.
+- **Covers**: Open Library by ISBN first, then Google Books, then the title on a neutral background.
+- **Search within your library**: a second button, "My library", filters the books already added by title, author, year or ISBN (ignoring accents and case), combined with the reading filters.
+- **Duplicate detection**: before adding a book, a dialog shows a similar book already in the library (same ISBN, or same title and a shared author, even for another edition) and asks for confirmation.
+- **Book details**: cover, title, author, year and description on demand.
+- **Reading tracking** in two steps: unread, reading or read, then owned or not owned.
+- **Filters**: all, reading, read, unread, owned, not owned. Clicking the active filter again goes back to "All".
+- **Genres**: the genre is assigned automatically (Google Books categories, then the genre of books by the same author, then keywords in the title and description) and can be changed in the book details; a manual choice is never overwritten. A dropdown filters the library by genre, with the number of books.
+- **Books in progress**: always shown first, in a dark wooden frame, until they are read.
+- **Multiple libraries**: create, rename and delete, with a keyboard-accessible menu (arrow keys, Esc).
+- **French and English interface** (FR / EN buttons, browser language detected on the first visit). Search is not limited to any language: you can add books in any language, whatever the interface language.
+- **Export and import**: from the logo menu, download all your libraries as a `.json` file (with the date of the last backup), then import it on another device, choosing to merge or replace. The imported file is validated and cleaned (known fields only, size limits, `https` covers only).
+- **Local storage** in the browser (`localStorage`): no data is sent to a server.
 
-## Choix techniques
+![Book details](docs/apercu-fiche.png)
 
-- **HTML, CSS et JavaScript sans framework ni étape de compilation.** Le site est un ensemble de fichiers statiques.
-- **Mise en page par grille CSS** : jusqu'à 6 livres par ligne, titres, auteurs et pastilles alignés d'une carte à l'autre grâce à `subgrid`, avec un gabarit de repli et des points de suspension pour les textes longs.
-- **Listes déroulantes sur mesure** (genres) : fond, ligne survolée et barre de défilement aux couleurs du site, avec navigation au clavier (flèches, Début/Fin, Entrée, Échap, saisie des premières lettres). Le `<select>` natif reste en coulisses comme source de vérité.
-- **Accessibilité** : navigation au clavier, rôles ARIA du menu, états `aria-pressed`, respect de `prefers-reduced-motion`.
-- **Polices hébergées dans le site** (Playfair Display, Lora et Jost, sous licence SIL Open Font) : aucune requête vers un service de polices tiers.
-- **Données de démonstration** : à la première visite, une bibliothèque d'exemple s'affiche (`demo.js`) : classiques français en français, classiques anglais en anglais. Leurs couvertures sont chargées par ISBN depuis Open Library.
+## Technical choices
 
-## Lancer le projet
+- **Vanilla HTML, CSS and JavaScript, no framework and no build step.** The site is a set of static files.
+- **Built with the help of an AI assistant** (Claude): I defined the features and interface choices, then reviewed and tested each version.
+- **CSS Grid layout**: up to 6 books per row, with titles, authors and badges aligned across cards thanks to `subgrid`, a fallback template and ellipses for long text.
+- **Custom dropdowns** (genres): background, hovered row and scrollbar in the site's colours, with keyboard navigation (arrow keys, Home/End, Enter, Esc, type-ahead). The native `<select>` stays behind the scenes as the source of truth.
+- **Accessibility**: keyboard navigation, ARIA menu roles, `aria-pressed` states, `prefers-reduced-motion` support.
+- **Self-hosted fonts** (Playfair Display, Lora and Jost, under the SIL Open Font License): no requests to a third-party font service.
+- **Demo data**: on the first visit, a sample library is displayed (`demo.js`): French classics in French, English classics in English. Their covers are loaded by ISBN from Open Library.
 
-Aucune installation n'est nécessaire. Ouvrez `index.html` dans un navigateur, ou lancez un serveur local :
+## Running the project
+
+No installation needed. Open `index.html` in a browser, or start a local server:
 
 ```bash
 python3 -m http.server 8000
 ```
 
-puis ouvrez <http://localhost:8000>.
+then open <http://localhost:8000>.
 
-## Clé API Google Books (facultative)
+## Google Books API key (optional)
 
-La recherche fonctionne sans clé, mais Google peut limiter les requêtes anonymes. Pour utiliser une clé, renseignez-la dans `config.js` :
+Search works without a key, but Google may limit anonymous requests. To use a key, set it in `config.js`:
 
 ```js
 window.APP_CONFIG = {
-  googleBooksApiKey: "VOTRE_CLE"
+  googleBooksApiKey: "YOUR_KEY"
 };
 ```
 
-Sur un site public, une clé est visible par tous les visiteurs. Utilisez une clé dédiée, restreinte au domaine du site (restriction « Websites », par exemple `https://votre-compte.github.io/*`, car le navigateur n'envoie que le domaine) et à l'API Books, avec un quota quotidien. Ne publiez jamais une clé non restreinte.
+On a public site, the key is visible to every visitor. Use a dedicated key, restricted to the site's domain ("Websites" restriction, for example `https://your-account.github.io/*`, since the browser only sends the domain) and to the Books API, with a daily quota. Never publish an unrestricted key.
 
 ## Structure
 
 ```
-index.html      page et fenêtres
-style.css       styles et polices
-script.js       logique de l'application
-demo.js         bibliothèque d'exemple (FR / EN)
-i18n.js         traductions de l'interface
-config.js       configuration (clé API facultative)
-fonts/          polices hébergées et leurs licences
-docs/           captures d'écran du README
+index.html      page and dialogs
+style.css       styles and fonts
+script.js       application logic
+demo.js         sample library (FR / EN)
+i18n.js         interface translations
+config.js       configuration (optional API key)
+fonts/          self-hosted fonts and their licences
+docs/           README screenshots and link preview image
 ```
 
 ## Licence
 
-Code publié sous licence [MIT](LICENSE). Les polices du dossier `fonts/` sont sous licence SIL Open Font (voir les fichiers `LICENSE-*.txt`). L'image `separateur.webp` a été créée sur Canva et n'est pas couverte par la licence MIT.
+Code released under the [MIT](LICENSE) licence. The fonts in the `fonts/` folder are under the SIL Open Font License (see the `LICENSE-*.txt` files). The `separateur.webp` image was created with Canva and is not covered by the MIT licence.
 
-## Limites connues
+## Known limitations
 
-- Les données sont liées au navigateur : changer de navigateur ou vider ses données efface la bibliothèque. L'export et l'import de fichier permettent de les transférer ou de les sauvegarder, sans synchronisation automatique.
-- La recherche dépend de la disponibilité de l'API Google Books, qui répond parfois par une erreur 503.
+- Data is tied to the browser: switching browsers or clearing site data erases the library. Export and import let you transfer or back it up, without automatic sync.
+- Search depends on the availability of the Google Books API, which sometimes responds with a 503 error.
