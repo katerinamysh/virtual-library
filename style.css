@@ -73,7 +73,7 @@ header h1{margin:0;font:700 clamp(1.9rem,7vw,2.9rem)/1 var(--font-display);lette
 
 /* Frise : taille fixe, centrée, rognée des deux côtés si l'écran est plus étroit */
 .divider{display:flex;justify-content:center;overflow:hidden;margin:24px 0 62px}
-.divider img{flex:none;display:block;width:440px;height:auto;max-width:none}
+.divider img{flex:0 1 auto;display:block;width:440px;max-width:100%;height:auto}
 
 /* Logo + nom de la bibliothèque, au-dessus de la recherche */
 .brand{position:relative;display:flex;align-items:center;gap:12px;margin-bottom:12px}
