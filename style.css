@@ -181,7 +181,7 @@ button.frame:hover .cover,button.frame:focus-visible .cover{box-shadow:inset 4px
 }
 
 /* ---------- 6. Fenêtres (popups) ---------- */
-dialog{width:min(560px,94vw);max-height:92vh;padding:0;border:4px double var(--ink);border-radius:0;background:var(--surface);color:var(--ink)}
+dialog{width:min(560px,94vw);max-height:92vh;padding:0;border:2px solid var(--ink);border-radius:0;background:var(--surface);color:var(--ink)}
 dialog::backdrop{background:rgba(51,40,36,.7)}
 .sheet{display:flex;flex-direction:column;gap:14px;max-height:92vh;padding:14px 22px;overflow:auto}
 .sheet input[type="text"]{padding:12px 14px;border:1px solid var(--ink);border-radius:0;background:var(--beige);color:var(--ink);font:inherit}
