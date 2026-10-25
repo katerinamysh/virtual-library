@@ -593,7 +593,6 @@ function appendResults(more) {   /* « Afficher plus » : on ajoute sans recharg
   lastFound = lastFound.concat(more);
   $("results").append(...more.map(resultCard));
 }
-$("closeResults").addEventListener("click", () => { $("resultsSection").hidden = true; });
 
 /* Filtre par genre : la liste ne montre que les genres présents dans la bibliothèque (avec leur nombre de livres) */
 let genreFilter = "";   /* "" = tous, une clé de GENRES, ou "none" = sans genre */
